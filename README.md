@@ -23,14 +23,19 @@ print(out.getvalue())
 
 `exec()` waits for completion and raises `ErrorReturnCode` on a non-zero exit
 (`ok_exit_codes(...)` widens what counts as success) and `TimeoutException` once
-`timeout(...)` elapses. A missing binary raises `CommandNotFound` at construction.
+`timeout(...)` elapses. A binary name missing from `PATH` (or from
+`Command(name, search_path=[...])`) raises `CommandNotFound` at construction; a
+`Path` is only checked when the command runs. `exec(wait_completion=False)`
+returns the running `Popen` without enforcing either.
 
 ### Redirects
 
-`stdout`/`stderr` accept a `Path`, a file object, a `StringIO` or a callable
-receiving each decoded line; `stdin` accepts a string, a file object or a
-`queue.Queue`/`asyncio.Queue` fed until `None`. `inherit()` wires all three to the
-current process.
+`stdout`/`stderr` accept a `Path`, a file object (text or binary, including
+`StringIO`/`BytesIO`) or a callable receiving each decoded line; unset, output is
+discarded. `stdin` accepts a `str` or `bytes` payload, a file object (including
+`StringIO`/`BytesIO`) or a queue fed until it yields `None`: a `queue.Queue` with
+`exec()`, an `asyncio.Queue` with `aexec()`. Unset, it reads from /dev/null.
+`inherit()` wires all three to the current process.
 
 ```python
 import logging
@@ -51,7 +56,10 @@ await Command("sleep").args("1").aexec()
 
 ### Pipelines
 
-Stages are connected with raw OS pipes, so binary payloads aren't decoded on the way.
+Stages run concurrently, connected with raw OS pipes, so binary payloads aren't
+decoded on the way. Each stage keeps its own stderr, env, cwd, timeout and exit
+codes. Stages are checked in order: the first failure raises and the stages
+still running are terminated.
 
 ```python
 from proclet import Command
@@ -64,6 +72,9 @@ Command("tar").args("-c", "data").pipeline(
 ```
 
 ### Environment, privileges and priority
+
+Without `env(...)` a command inherits the current environment; once set, it gets
+exactly that mapping, so build on `EnvCmd.inherit()` to keep it.
 
 ```python
 from proclet import Command, EnvCmd, PathCmd
@@ -105,7 +116,7 @@ class Git(Bind):
 ### Observers
 
 `add_observer(...)` registers a `ProcessObserver` notified with `on_spawn(process)`
-and `on_exit(process)`.
+and `on_exit(process)`. Hooks run synchronously and must not raise.
 
 ## Development
 
