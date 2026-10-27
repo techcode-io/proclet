@@ -478,6 +478,12 @@ class TestCommand:
         await cmd.aexec()
         assert any("async stdin" in line for line in lines)
 
+    async def test_aexec_stdout_line_longer_than_stream_limit(self) -> None:
+        payload = "x" * (1 << 20)
+        out = StringIO()
+        await Command("cat").stdin(payload).stdout(out).timeout(10).aexec()
+        assert out.getvalue() == payload
+
     async def test_aexec_large_stdin_string_does_not_deadlock(self) -> None:
         payload = ("x" * 1023 + "\n") * 1024
         out = StringIO()

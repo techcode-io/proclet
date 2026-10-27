@@ -278,6 +278,31 @@ def _needs_forwarding(redirect: RedirectOut | None) -> bool:
     return False
 
 
+async def _read_line(stream: asyncio.StreamReader) -> bytes:
+    """
+    Read one line of any length, like the sync forwarder's `readline()`.
+
+    `StreamReader.readline()` raises once a line outgrows the stream's buffer
+    limit (64 KiB by default), which would stop the forwarding for good.
+
+    Args:
+        stream: the stream reader to read from.
+    Returns:
+        the line including its trailing newline, or `b""` at EOF.
+    """
+    chunks: list[bytes] = []
+    while True:
+        try:
+            chunks.append(await stream.readuntil(b"\n"))
+            break
+        except asyncio.IncompleteReadError as err:
+            chunks.append(err.partial)
+            break
+        except asyncio.LimitOverrunError as err:
+            chunks.append(await stream.readexactly(err.consumed))
+    return b"".join(chunks)
+
+
 class Command:
     """Convenient wrapper around subprocess for process execution."""
 
@@ -1197,7 +1222,7 @@ class Command:
         async def forward() -> None:
             try:
                 while True:
-                    line = await stream.readline()
+                    line = await _read_line(stream)
                     if not line:
                         break
                     decoded = line.decode(errors="replace")
