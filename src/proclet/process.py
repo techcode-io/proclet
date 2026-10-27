@@ -179,10 +179,10 @@ def _require_os(option: str, func: str) -> None:
 
 
 class EnvCmd:
-    """Convenient environment variables builder for command."""
+    """Builder for the env vars passed to `Command.env()`."""
 
     def __init__(self) -> None:
-        """Init env command."""
+        """Init an empty env command, same as `empty()`."""
         self.__build: dict[str, str] = {}
 
     @staticmethod
@@ -192,7 +192,15 @@ class EnvCmd:
 
     @staticmethod
     def inherit(predicate: Callable[[str, str], bool] | None = None) -> EnvCmd:
-        """Create an env command that inherit environment variables from the current process."""
+        """
+        Create an env command that inherits env vars from the current process.
+
+        Args:
+            predicate: keeps only the `(key, value)` pairs it returns True for;
+                every variable is kept when omitted.
+        Returns:
+            the env command.
+        """
         env = EnvCmd()
         if predicate:
             env.__build = {
@@ -203,23 +211,30 @@ class EnvCmd:
         return env
 
     def add(self, env_vars: dict[str, str]) -> Self:
-        """Add environment variables to the env command."""
+        """
+        Add env vars, overriding any already set under the same key.
+
+        Args:
+            env_vars: env vars to add.
+        Returns:
+            self for chaining.
+        """
         self.__build.update(env_vars)
         return self
 
     def build(self) -> dict[str, str]:
         """
         Returns:
-            environment variables built using the env command.
+            a copy of the env vars built so far.
         """
         return self.__build.copy()
 
 
 class PathCmd:
-    """Convenient path builder for command."""
+    """Builder for a `PATH` env var value."""
 
     def __init__(self) -> None:
-        """Init path command."""
+        """Init an empty path command, same as `empty()`."""
         self.__build: list[str] = []
 
     @staticmethod
@@ -229,23 +244,37 @@ class PathCmd:
 
     @staticmethod
     def inherit() -> PathCmd:
-        """Create a path command that inherit the PATH environment variable from the current process."""
+        """
+        Create a path command that inherits `PATH` from the current process.
+
+        Empty entries are dropped, since a lookup would treat them as the
+        current directory.
+
+        Returns:
+            the path command.
+        """
         path = PathCmd()
-        # Drop empty entries: they mean the current directory to a PATH lookup.
         path.__build = [
             entry for entry in os.environ.get("PATH", "").split(os.pathsep) if entry
         ]
         return path
 
     def add(self, value: str) -> Self:
-        """Add a binary directory path to the program PATH."""
+        """
+        Prepend a directory, so it is searched before those already added.
+
+        Args:
+            value: directory to prepend.
+        Returns:
+            self for chaining.
+        """
         self.__build.insert(0, value)
         return self
 
     def build(self) -> str:
         """
         Returns:
-            computed PATH environment variable.
+            the `PATH` value, entries joined with `os.pathsep`.
         """
         return os.pathsep.join(self.__build)
 
