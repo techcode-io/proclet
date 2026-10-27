@@ -80,8 +80,8 @@ env = (
     .env(env)
     .user("backup")  # requires sufficient privileges, e.g. root
     .group("backup")
-    .extra_groups([])  # drop supplementary groups
-    .nice(19)  # lowest CPU priority, idle IO class on Linux
+    .extra_groups([])  # drop supplementary groups (user/group/extra_groups: POSIX only)
+    .nice(19)  # lowest CPU priority, idle IO class on Linux, idle class on Windows
     .exec()
 )
 ```

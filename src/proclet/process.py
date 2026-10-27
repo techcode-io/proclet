@@ -121,13 +121,14 @@ def _low_priority_hook(nice: int | None) -> Callable[[], None] | None:
     Everything the hook needs is resolved here, before the fork, so the hook
     itself only makes plain syscalls. IO priority is best effort: it is
     skipped off Linux and on unknown machines, and failures are ignored.
+    Windows has no `preexec_fn`; see `_priority_creationflags` instead.
 
     Args:
         nice: niceness to apply, `None` for no change.
     Returns:
-        the hook, or `None` when no priority change is requested.
+        the hook, or `None` when no priority change is requested or on Windows.
     """
-    if nice is None:
+    if nice is None or sys.platform == "win32":
         return None
 
     syscall = None
@@ -149,6 +150,47 @@ def _low_priority_hook(nice: int | None) -> Callable[[], None] | None:
             )
 
     return hook
+
+
+def _priority_creationflags(nice: int | None) -> int:
+    """
+    Map a niceness to the Windows priority class of a child.
+
+    Windows has no niceness, only a handful of priority classes, so the value
+    is bucketed: >= 15 idle, 1..14 below normal, 0 unchanged, -14..-1 above
+    normal, <= -15 high (never realtime).
+
+    Args:
+        nice: niceness to apply, `None` for no change.
+    Returns:
+        the `creationflags` to pass on spawn, `0` off Windows or for no change.
+    """
+    if nice is None or nice == 0 or sys.platform != "win32":
+        return 0
+    if nice >= 15:
+        name = "IDLE_PRIORITY_CLASS"
+    elif nice > 0:
+        name = "BELOW_NORMAL_PRIORITY_CLASS"
+    elif nice > -15:
+        name = "ABOVE_NORMAL_PRIORITY_CLASS"
+    else:
+        name = "HIGH_PRIORITY_CLASS"
+    # Only defined on Windows.
+    return getattr(subprocess, name)
+
+
+def _require_os(option: str, func: str) -> None:
+    """
+    Fail fast when the platform can't apply a POSIX-only spawn option.
+
+    Args:
+        option: name of the option being set, for the error message.
+        func: `os` function the option relies on, e.g. `setgroups`.
+    Raises:
+        ValueError: if `os` lacks `func` (e.g. on Windows).
+    """
+    if not hasattr(os, func):
+        raise ValueError(f"'{option}' is only supported on POSIX platforms")
 
 
 class EnvCmd:
@@ -356,10 +398,13 @@ class Command:
             value: user (name or uid) to run the command as.
         Returns:
             current user if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return self.__user
 
+        _require_os("user", "setreuid")
         self.__user = value
         return self
 
@@ -380,10 +425,13 @@ class Command:
             value: group (name or gid) to run the command as.
         Returns:
             current group if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return self.__group
 
+        _require_os("group", "setregid")
         self.__group = value
         return self
 
@@ -400,16 +448,19 @@ class Command:
         Returns current supplementary groups if no value is provided, otherwise set them.
 
         Unset (`None`) keeps the parent's supplementary groups; an empty list
-        drops them all, which is what a privilege drop wants.
+        drops them all, which is what a privilege drop wants. POSIX only.
 
         Args:
             value: supplementary groups (names or gids) to run the command with.
         Returns:
             current supplementary groups if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return None if self.__extra_groups is None else list(self.__extra_groups)
 
+        _require_os("extra_groups", "setgroups")
         self.__extra_groups = list(value)
         return self
 
@@ -425,7 +476,9 @@ class Command:
 
         The child lowers its CPU priority to this niceness before exec (and,
         on Linux, moves to the idle IO class on a best effort basis). Raising
-        priority (a negative value) needs privileges, like `nice(1)`.
+        priority (a negative value) needs privileges, like `nice(1)`. On
+        Windows the value maps to a priority class instead: >= 15 idle,
+        1..14 below normal, -14..-1 above normal, <= -15 high.
 
         Args:
             value: niceness to run the command with, e.g. 19 for the lowest priority.
@@ -664,6 +717,7 @@ class Command:
                 extra_groups=self.__extra_groups,
                 # Only plain syscalls, resolved before the fork (see _low_priority_hook).
                 preexec_fn=_low_priority_hook(self.__nice),  # noqa: PLW1509
+                creationflags=_priority_creationflags(self.__nice),
             )
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
@@ -1116,6 +1170,7 @@ class Command:
                 group=self.__group,
                 extra_groups=self.__extra_groups,
                 preexec_fn=_low_priority_hook(self.__nice),
+                creationflags=_priority_creationflags(self.__nice),
             )
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
@@ -1651,6 +1706,8 @@ class Bind:
             value: supplementary groups (names or gids); empty drops them all.
         Returns:
             current supplementary groups if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return self._cmd.extra_groups()

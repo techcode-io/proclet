@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import subprocess
 import sys
 import threading
 from asyncio import Queue as AsyncQueue
@@ -22,6 +23,7 @@ from proclet import (
     Process,
     TimeoutException,
 )
+from proclet.process import _low_priority_hook, _priority_creationflags
 
 
 class _RecordingObserver:
@@ -1535,6 +1537,7 @@ class TestNice:
         assert bind.nice(3) is bind
         assert bind.nice() == 3
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX niceness")
     def test_exec_applies_nice(self) -> None:
         buf = StringIO()
         base = os.getpriority(os.PRIO_PROCESS, 0)
@@ -1543,14 +1546,75 @@ class TestNice:
         ).exec()
         assert buf.getvalue().strip() == str(base + 5)
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX niceness")
     def test_exec_without_nice_keeps_priority(self) -> None:
         buf = StringIO()
         Command(sys.executable).args("-c", self._SHOW_NICE).stdout(buf).exec()
         assert buf.getvalue().strip() == str(os.getpriority(os.PRIO_PROCESS, 0))
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX niceness")
     async def test_aexec_applies_nice(self) -> None:
         buf = StringIO()
         base = os.getpriority(os.PRIO_PROCESS, 0)
         cmd = Command(sys.executable).args("-c", self._SHOW_NICE).nice(base + 5)
         await cmd.stdout(buf).aexec()
         assert buf.getvalue().strip() == str(base + 5)
+
+    def test_no_creationflags_off_windows(self) -> None:
+        assert _priority_creationflags(19) == 0
+        assert _priority_creationflags(None) == 0
+
+    @pytest.mark.parametrize(
+        ("nice", "expected"),
+        [
+            (None, 0),
+            (0, 0),
+            (19, 1),
+            (15, 1),
+            (14, 2),
+            (1, 2),
+            (-1, 3),
+            (-14, 3),
+            (-15, 4),
+            (-20, 4),
+        ],
+    )
+    def test_windows_priority_class(
+        self, monkeypatch: pytest.MonkeyPatch, nice: int | None, expected: int
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", "win32")
+        for value, name in enumerate(
+            [
+                "IDLE_PRIORITY_CLASS",
+                "BELOW_NORMAL_PRIORITY_CLASS",
+                "ABOVE_NORMAL_PRIORITY_CLASS",
+                "HIGH_PRIORITY_CLASS",
+            ],
+            start=1,
+        ):
+            monkeypatch.setattr(subprocess, name, value, raising=False)
+        assert _priority_creationflags(nice) == expected
+
+    def test_no_preexec_hook_on_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(sys, "platform", "win32")
+        assert _low_priority_hook(5) is None
+
+
+class TestPosixOnlyOptions:
+    @pytest.mark.parametrize(
+        ("option", "func", "value"),
+        [
+            ("user", "setreuid", "nobody"),
+            ("group", "setregid", "nogroup"),
+            ("extra_groups", "setgroups", []),
+        ],
+    )
+    def test_setter_fails_fast_without_os_support(
+        self, monkeypatch: pytest.MonkeyPatch, option: str, func: str, value: object
+    ) -> None:
+        monkeypatch.delattr(os, func, raising=False)
+        with pytest.raises(ValueError, match=option):
+            getattr(Command("echo"), option)(value)
+        with pytest.raises(ValueError, match=option):
+            getattr(Bind("echo"), option)(value)
+        assert getattr(Command("echo"), option)() is None

@@ -51,12 +51,14 @@ No runtime dependencies - keep it that way.
   should merge them onto `self.env()`, not replace it, so a caller's env survives.
 - `user`/`group`/`extra_groups` pass straight to `subprocess.Popen`/
   `asyncio.create_subprocess_exec`. `extra_groups`: `None` keeps the parent's groups, `[]`
-  drops them; never default it to `[]` - `setgroups` fails for non-root.
+  drops them; never default it to `[]` - `setgroups` fails for non-root. They are POSIX
+  only: their setters raise `ValueError` (via `_require_os`) where `os` lacks the call.
 - `search_path` restricts binary lookup to given directories instead of `PATH` (ignored
   when `cmd_path` is a `Path`).
 - `nice(...)` uses a `preexec_fn` built by `_low_priority_hook`: everything is resolved
   before the fork so the hook only makes plain syscalls; the Linux idle IO class is best
-  effort (skipped off Linux / unknown machines).
+  effort (skipped off Linux / unknown machines). Windows has no `preexec_fn`: there
+  `_priority_creationflags` maps the niceness to a priority class via `creationflags`.
 - `pipeline`/`apipeline` connect stages with raw OS pipes (binary safe, no decoding).
   Thread/task forwarding is only used for Python-facing ends (callables, `StringIO`,
   queues, strings).
