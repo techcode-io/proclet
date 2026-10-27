@@ -9,13 +9,19 @@ import sys
 from asyncio import Task, create_task, gather
 from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import suppress
-from io import IOBase, TextIOBase
 from pathlib import Path
 from threading import Thread
 from typing import IO, NamedTuple, Protocol, Self, overload
 
 from proclet._io import close
 from proclet._platform import low_priority_hook, priority_creationflags, require_os
+from proclet._streams import (
+    STDIN_CHUNK_SIZE,
+    dispatch_line,
+    encode_input,
+    needs_forwarding,
+    read_line,
+)
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
 from proclet.redirect import RedirectIn, RedirectOut
 
@@ -58,74 +64,8 @@ class ProcessObserver(Protocol):
         ...
 
 
-def _needs_forwarding(redirect: RedirectOut | None) -> bool:
-    """Check if a redirect needs a forwarding thread."""
-    if redirect is None:
-        return False
-    if callable(redirect):
-        return True
-    if isinstance(redirect, IOBase):
-        # File objects (text or binary) without a real fd (e.g. StringIO) need forwarding
-        try:
-            redirect.fileno()
-            return False
-        except (OSError, AttributeError):
-            return True
-    return False
-
-
 # Strong references to fire-and-forget tasks, so they can't be collected mid-run.
 _background_tasks: set[Task[None]] = set()
-
-# Read size used to feed a file object without a real fd (e.g. StringIO) to stdin.
-_STDIN_CHUNK_SIZE = 64 * 1024
-
-
-def _encode_input(data: bytes | str) -> bytes:
-    """Encode stdin input, passing bytes through untouched."""
-    return data if isinstance(data, bytes) else data.encode()
-
-
-def _dispatch_line(target: RedirectOut, line: bytes) -> None:
-    """Hand one line of process output to a forwarded redirect target.
-
-    Callables and text streams get the line decoded (invalid bytes replaced);
-    binary streams without a real fd (e.g. BytesIO) get the raw bytes.
-
-    Args:
-        target: the redirect target, one that `_needs_forwarding` accepted.
-        line: the raw line read from the process.
-    """
-    if callable(target):
-        target(line.decode(errors="replace"))
-    elif isinstance(target, TextIOBase):
-        target.write(line.decode(errors="replace"))
-    elif isinstance(target, IOBase):
-        target.write(line)
-
-
-async def _read_line(stream: asyncio.StreamReader) -> bytes:
-    """Read one line of any length, like the sync forwarder's `readline()`.
-
-    `StreamReader.readline()` raises once a line outgrows the stream's buffer
-    limit (64 KiB by default), which would stop the forwarding for good.
-
-    Args:
-        stream: the stream reader to read from.
-    Returns:
-        the line including its trailing newline, or `b""` at EOF.
-    """
-    chunks: list[bytes] = []
-    while True:
-        try:
-            chunks.append(await stream.readuntil(b"\n"))
-            break
-        except asyncio.IncompleteReadError as err:
-            chunks.append(err.partial)
-            break
-        except asyncio.LimitOverrunError as err:
-            chunks.append(await stream.readexactly(err.consumed))
-    return b"".join(chunks)
 
 
 class Command:
@@ -598,7 +538,7 @@ class Command:
             objects without a real fd), the fd of other file objects, or
             subprocess.DEVNULL when unset or unusable.
         """
-        if _needs_forwarding(redirect):
+        if needs_forwarding(redirect):
             return subprocess.PIPE
         try:
             return redirect.fileno()
@@ -647,7 +587,7 @@ class Command:
 
         Args:
             stream: binary readable stream to read from (e.g. process stdout or stderr pipe).
-            target: destination for the lines, see `_dispatch_line`.
+            target: destination for the lines, see `dispatch_line`.
         Returns:
             daemon thread, not yet started.
         """
@@ -655,7 +595,7 @@ class Command:
         def forward() -> None:
             try:
                 for line in iter(stream.readline, b""):
-                    _dispatch_line(target, line)
+                    dispatch_line(target, line)
             except (OSError, ValueError):
                 pass
             finally:
@@ -683,13 +623,13 @@ class Command:
 
         def chunks() -> Iterator[bytes]:
             if isinstance(source, (str, bytes)):
-                yield _encode_input(source)
+                yield encode_input(source)
             elif isinstance(source, queue.Queue):
                 while (data := source.get()) is not None:
-                    yield _encode_input(data)
+                    yield encode_input(data)
             else:
-                while data := source.read(_STDIN_CHUNK_SIZE):
-                    yield _encode_input(data)
+                while data := source.read(STDIN_CHUNK_SIZE):
+                    yield encode_input(data)
 
         def forward() -> None:
             with suppress(OSError):
@@ -712,7 +652,7 @@ class Command:
         Returns:
             the started thread, or None if this stream doesn't need forwarding.
         """
-        if _needs_forwarding(target) and stream is not None and target is not None:
+        if needs_forwarding(target) and stream is not None and target is not None:
             thread = self._create_thread_forwarder(stream, target)
             thread.start()
             return thread
@@ -1111,16 +1051,16 @@ class Command:
 
         Args:
             stream: the stream reader to forward from (stdout or stderr).
-            target: destination for the lines, see `_dispatch_line`.
+            target: destination for the lines, see `dispatch_line`.
         """
 
         async def forward() -> None:
             try:
                 while True:
-                    line = await _read_line(stream)
+                    line = await read_line(stream)
                     if not line:
                         break
-                    _dispatch_line(target, line)
+                    dispatch_line(target, line)
             except (OSError, ValueError):
                 pass
 
@@ -1145,13 +1085,13 @@ class Command:
 
         async def chunks() -> AsyncIterator[bytes]:
             if isinstance(source, (str, bytes)):
-                yield _encode_input(source)
+                yield encode_input(source)
             elif isinstance(source, asyncio.Queue):
                 while (data := await source.get()) is not None:
-                    yield _encode_input(data)
+                    yield encode_input(data)
             else:
-                while data := source.read(_STDIN_CHUNK_SIZE):
-                    yield _encode_input(data)
+                while data := source.read(STDIN_CHUNK_SIZE):
+                    yield encode_input(data)
 
         async def forward() -> None:
             with suppress(OSError):
@@ -1175,7 +1115,7 @@ class Command:
         Returns:
             the created task, or None if this stream doesn't need forwarding.
         """
-        if _needs_forwarding(target) and stream is not None and target is not None:
+        if needs_forwarding(target) and stream is not None and target is not None:
             return self._create_task_forwarder(stream, target)
         return None
 
