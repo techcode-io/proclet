@@ -426,6 +426,16 @@ class TestCommand:
         assert any("line1" in line for line in lines)
         assert any("line2" in line for line in lines)
 
+    def test_exec_rejects_async_queue_stdin(self) -> None:
+        q: AsyncQueue[bytes | str | None] = AsyncQueue()
+        with pytest.raises(TypeError, match="asyncio.Queue"):
+            Command("cat").stdin(q).exec()
+
+    def test_pipeline_rejects_async_queue_stdin(self) -> None:
+        q: AsyncQueue[bytes | str | None] = AsyncQueue()
+        with pytest.raises(TypeError, match="asyncio.Queue"):
+            Command("cat").stdin(q).pipeline(Command("cat"))
+
     def test_exec_with_env(self) -> None:
         lines: list[str] = []
         env = EnvCmd.inherit().add({"MY_TEST_VAR": "my_value"}).build()
@@ -588,6 +598,16 @@ class TestCommand:
         await cmd.aexec()
         assert any("async_line1" in line for line in lines)
         assert any("async_line2" in line for line in lines)
+
+    async def test_aexec_rejects_sync_queue_stdin(self) -> None:
+        q: Queue[bytes | str | None] = Queue()
+        with pytest.raises(TypeError, match="queue.Queue"):
+            await Command("cat").stdin(q).aexec()
+
+    async def test_apipeline_rejects_sync_queue_stdin(self) -> None:
+        q: Queue[bytes | str | None] = Queue()
+        with pytest.raises(TypeError, match="queue.Queue"):
+            await Command("cat").stdin(q).apipeline(Command("cat"))
 
     async def test_aexec_with_env(self) -> None:
         lines: list[str] = []

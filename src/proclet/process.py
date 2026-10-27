@@ -713,6 +713,21 @@ class Command:
         for obs in observers:
             obs.on_spawn(process)
 
+    def _check_stdin_mode(self, *, asynchronous: bool) -> None:
+        """
+        Reject a stdin queue that the requested execution mode can't consume.
+
+        Args:
+            asynchronous: whether the command is about to run through asyncio.
+        Raises:
+            TypeError: if stdin is a `queue.Queue` for an async run, or an
+                `asyncio.Queue` for a sync one.
+        """
+        if asynchronous and isinstance(self.__in, queue.Queue):
+            raise TypeError("async runs need an asyncio.Queue stdin, not a queue.Queue")
+        if not asynchronous and isinstance(self.__in, asyncio.Queue):
+            raise TypeError("sync runs need a queue.Queue stdin, not an asyncio.Queue")
+
     def _prepare_stdin(self) -> int | None:
         """Convert the configured stdin redirect into a file descriptor or subprocess constant.
 
@@ -1005,6 +1020,7 @@ class Command:
         Returns:
             subprocess.Popen process.
         """
+        self._check_stdin_mode(asynchronous=False)
         full_cmd = self._full_cmd()
 
         stdout = self._prepare_redirect(self.__out)
@@ -1080,12 +1096,14 @@ class Command:
             the last command's completed subprocess.Popen.
         Raises:
             ValueError: if no downstream commands are given.
+            TypeError: if this command's stdin queue doesn't match the run mode.
             CommandNotFound: if any binary can't be found.
             ErrorReturnCode: if any process exits with a non-zero code.
             TimeoutException: if any command's configured timeout elapses.
         """
         if not others:
             raise ValueError("pipeline() requires at least one downstream command")
+        self._check_stdin_mode(asynchronous=False)
 
         stages: list[Command] = [self, *others]
         last_index = len(stages) - 1
@@ -1462,6 +1480,7 @@ class Command:
         Returns:
             asyncio.subprocess.Process.
         """
+        self._check_stdin_mode(asynchronous=True)
         full_cmd = self._full_cmd()
 
         # Prepare subprocess args for async
@@ -1535,12 +1554,14 @@ class Command:
             the last command's completed asyncio.subprocess.Process.
         Raises:
             ValueError: if no downstream commands are given.
+            TypeError: if this command's stdin queue doesn't match the run mode.
             CommandNotFound: if any binary can't be found.
             ErrorReturnCode: if any process exits with a non-zero code.
             TimeoutException: if any command's configured timeout elapses.
         """
         if not others:
             raise ValueError("apipeline() requires at least one downstream command")
+        self._check_stdin_mode(asynchronous=True)
         stages: list[Command] = [self, *others]
         last_index = len(stages) - 1
         full_cmds = [stage._full_cmd() for stage in stages]
