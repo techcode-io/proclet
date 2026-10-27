@@ -8,7 +8,6 @@ import queue
 import shutil
 import subprocess
 import sys
-import threading
 from asyncio import Task, create_task, gather
 from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from contextlib import suppress
@@ -896,7 +895,7 @@ class Command:
                     stdin.write(chunk)
             close([stdin])
 
-        thread = threading.Thread(target=forward, daemon=True)
+        thread = Thread(target=forward, daemon=True)
         thread.start()
         return thread
 
@@ -977,7 +976,7 @@ class Command:
                 for obs in observers:
                     obs.on_exit(process)
 
-        thread = threading.Thread(target=reap, daemon=True)
+        thread = Thread(target=reap, daemon=True)
         thread.start()
 
     @staticmethod
@@ -1348,7 +1347,7 @@ class Command:
             with suppress(OSError):
                 await stdin.wait_closed()
 
-        return asyncio.create_task(forward())
+        return create_task(forward())
 
     def _ahandle_stream(
         self, stream: asyncio.StreamReader | None, target: RedirectOut | None
@@ -1389,7 +1388,7 @@ class Command:
     def _create_io_tasks(
         self,
         process: AsyncProcess,
-    ) -> list[asyncio.Task[None]]:
+    ) -> list[Task[None]]:
         """Start tasks for forwarding I/O to callbacks/StringIO.
 
         Args:
@@ -1408,7 +1407,7 @@ class Command:
     @staticmethod
     def _areap_in_background(
         process: AsyncProcess,
-        io_tasks: list[asyncio.Task[None]],
+        io_tasks: list[Task[None]],
         opened_files: list[IO[bytes]],
         observers: list[ProcessObserver],
     ) -> None:
