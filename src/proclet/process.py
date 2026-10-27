@@ -949,7 +949,7 @@ class Command:
         return threads
 
     @staticmethod
-    def _create_gc_thread(
+    def _reap_in_background(
         process: SyncProcess,
         io_threads: list[Thread],
         opened_files: list[IO[bytes]],
@@ -964,7 +964,7 @@ class Command:
             observers: observers to notify once the process has exited.
         """
 
-        def garbage_collector() -> None:
+        def reap() -> None:
             try:
                 process.wait()
             except OSError:
@@ -977,7 +977,7 @@ class Command:
                 for obs in observers:
                     obs.on_exit(process)
 
-        thread = threading.Thread(target=garbage_collector, daemon=True)
+        thread = threading.Thread(target=reap, daemon=True)
         thread.start()
 
     @staticmethod
@@ -1087,7 +1087,9 @@ class Command:
             )
             return process
         else:
-            self._create_gc_thread(process, io_threads, opened_files, self.__observers)
+            self._reap_in_background(
+                process, io_threads, opened_files, self.__observers
+            )
             return process
 
     def pipe(self, other: Command) -> SyncProcess:
@@ -1404,13 +1406,13 @@ class Command:
         return tasks
 
     @staticmethod
-    def _create_gc_task(
+    def _areap_in_background(
         process: AsyncProcess,
         io_tasks: list[asyncio.Task[None]],
         opened_files: list[IO[bytes]],
         observers: list[ProcessObserver],
     ) -> None:
-        """Clean up resources after async process completes.
+        """Start a background task to clean up resources after process exits.
 
         Args:
             process: the asyncio subprocess to wait for.
@@ -1419,7 +1421,7 @@ class Command:
             observers: observers to notify once the process has exited.
         """
 
-        async def garbage_collector() -> None:
+        async def reap() -> None:
             try:
                 await process.wait()
             except OSError:
@@ -1434,7 +1436,7 @@ class Command:
                     obs.on_exit(process)
 
         # The event loop only keeps weak references to tasks.
-        task = create_task(garbage_collector())
+        task = create_task(reap())
         _background_tasks.add(task)
         task.add_done_callback(_background_tasks.discard)
 
@@ -1550,7 +1552,7 @@ class Command:
             )
             return process
         else:
-            self._create_gc_task(process, io_tasks, opened_files, self.__observers)
+            self._areap_in_background(process, io_tasks, opened_files, self.__observers)
             return process
 
     async def apipe(self, other: Command) -> AsyncProcess:
