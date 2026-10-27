@@ -1763,7 +1763,14 @@ class Command:
 
 
 class Bind:
-    """Wrapper to create bind tied to command for process execution."""
+    """
+    Base class for typed wrappers around one binary.
+
+    Subclasses call `super().__init__("<binary>")` and drive `self._cmd`, the
+    underlying `Command`; the methods below forward to it. A subclass that
+    needs extra env vars should merge them onto `self.env()` rather than
+    replace it, so a caller's env survives.
+    """
 
     def __init__(
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
@@ -1772,7 +1779,7 @@ class Bind:
         Init bind.
 
         Args:
-            cmd_path: command path.
+            cmd_path: command name or path, see `Command`.
             search_path: directories to look the binary up in instead of `PATH`.
         Raises:
             CommandNotFound: if the command binary can't be found.
@@ -1783,13 +1790,15 @@ class Bind:
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
     ) -> Command:
         """
-        Create command wrapper for process execution.
+        Create the underlying command; override to customise it.
 
         Args:
             cmd_path: command name or path.
             search_path: directories to look the binary up in instead of `PATH`.
         Returns:
-            command wrapper.
+            the command.
+        Raises:
+            CommandNotFound: if the command binary can't be found.
         """
         return Command(cmd_path, search_path)
 
@@ -1807,6 +1816,8 @@ class Bind:
     def env(self, value: dict[str, str] | None = None) -> dict[str, str] | Self:
         """
         Returns current env vars if no value is provided, otherwise set env vars.
+
+        See `Command.env()`: unset inherits the parent's environment.
 
         Args:
             value: env vars to set.
@@ -1848,10 +1859,14 @@ class Bind:
         """
         Returns current user if no value is provided, otherwise set user.
 
+        See `Command.user()`: needs the privileges to switch user.
+
         Args:
             value: user (name or uid) to run the command as.
         Returns:
             current user if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return self._cmd.user()
@@ -1868,10 +1883,14 @@ class Bind:
         """
         Returns current group if no value is provided, otherwise set group.
 
+        See `Command.group()`.
+
         Args:
             value: group (name or gid) to run the command as.
         Returns:
             current group if no value is provided or self for chaining.
+        Raises:
+            ValueError: if set on a non-POSIX platform.
         """
         if value is None:
             return self._cmd.group()
@@ -1889,6 +1908,8 @@ class Bind:
     ) -> list[str | int] | None | Self:
         """
         Returns current supplementary groups if no value is provided, otherwise set them.
+
+        See `Command.extra_groups()`: unset keeps the parent's groups.
 
         Args:
             value: supplementary groups (names or gids); empty drops them all.
@@ -1912,6 +1933,8 @@ class Bind:
         """
         Returns current niceness if no value is provided, otherwise set it.
 
+        See `Command.nice()` for the per-platform behaviour.
+
         Args:
             value: niceness to run the command with, e.g. 19 for the lowest priority.
         Returns:
@@ -1924,7 +1947,7 @@ class Bind:
 
     def stdin(self, value: RedirectIn) -> Self:
         """
-        Set stdin redirect.
+        Set stdin redirect, see `Command.stdin()` for the accepted values.
 
         Args:
             value: stdin to set.
@@ -1936,7 +1959,7 @@ class Bind:
 
     def stdout(self, value: RedirectOut) -> Self:
         """
-        Set stdout redirect.
+        Set stdout redirect, see `Command.stdout()` for the accepted values.
 
         Args:
             value: stdout to set.
@@ -1948,7 +1971,7 @@ class Bind:
 
     def stderr(self, value: RedirectOut) -> Self:
         """
-        Set stderr redirect.
+        Set stderr redirect, see `Command.stdout()` for the accepted values.
 
         Args:
             value: stderr to set.
@@ -1994,7 +2017,16 @@ class Bind:
         return self
 
     def ok_exit_codes(self, *codes: int) -> Self:
-        """Set the exit codes considered successful (default: only 0)."""
+        """
+        Set the exit codes considered successful, see `Command.ok_exit_codes()`.
+
+        Args:
+            *codes: the successful exit codes; they replace the current set.
+        Returns:
+            self for chaining.
+        Raises:
+            ValueError: if no code is given.
+        """
         self._cmd.ok_exit_codes(*codes)
         return self
 
@@ -2029,6 +2061,8 @@ class Bind:
             other: the downstream bind or command to receive this command's stdout.
         Returns:
             the downstream command's completed subprocess.Popen.
+        Raises:
+            See `Command.pipeline()`.
         """
         return self.pipeline(other)
 
@@ -2044,6 +2078,8 @@ class Bind:
             others: the downstream binds or commands to chain after this one, in order.
         Returns:
             the last command's completed subprocess.Popen.
+        Raises:
+            See `Command.pipeline()`.
         """
         return self._cmd.pipeline(
             *(other._cmd if isinstance(other, Bind) else other for other in others)
@@ -2061,6 +2097,8 @@ class Bind:
             other: the downstream bind or command to receive this command's stdout.
         Returns:
             the downstream command's completed asyncio.subprocess.Process.
+        Raises:
+            See `Command.apipeline()`.
         """
         return await self.apipeline(other)
 
@@ -2076,6 +2114,8 @@ class Bind:
             others: the downstream binds or commands to chain after this one, in order.
         Returns:
             the last command's completed asyncio.subprocess.Process.
+        Raises:
+            See `Command.apipeline()`.
         """
         return await self._cmd.apipeline(
             *(other._cmd if isinstance(other, Bind) else other for other in others)
