@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from io import IOBase, TextIOBase
+from typing import Final
 
 from proclet.redirect import RedirectOut
 
@@ -25,7 +26,7 @@ def needs_forwarding(redirect: RedirectOut | None) -> bool:
 
 
 # Read size used to feed a file object without a real fd (e.g. StringIO) to stdin.
-STDIN_CHUNK_SIZE = 64 * 1024
+STDIN_CHUNK_SIZE: Final = 64 * 1024
 
 
 def encode_input(data: bytes | str) -> bytes:

@@ -9,12 +9,14 @@ import subprocess
 import sys
 from collections.abc import Callable
 from contextlib import suppress
+from types import MappingProxyType
+from typing import Final
 
 # `ioprio_set` syscall numbers by machine; unknown machines skip the IO class.
-_IOPRIO_SYSCALL = {"x86_64": 251, "aarch64": 30}
-_IOPRIO_WHO_PROCESS = 1
-_IOPRIO_CLASS_IDLE = 3
-_IOPRIO_CLASS_SHIFT = 13
+_IOPRIO_SYSCALL: Final = MappingProxyType({"x86_64": 251, "aarch64": 30})
+_IOPRIO_WHO_PROCESS: Final = 1
+_IOPRIO_CLASS_IDLE: Final = 3
+_IOPRIO_CLASS_SHIFT: Final = 13
 
 
 def low_priority_hook(nice: int | None) -> Callable[[], None] | None:
