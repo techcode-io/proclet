@@ -1,0 +1,74 @@
+[project]
+name = "proclet"
+version = "0.1.0-dev"
+description = "Fluent, typed subprocess wrapper with sync and async execution and pipelines."
+authors = [
+    { name = "Adrien Mannocci", email = "adrien.mannocci@gmail.com" }
+]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+readme = "README.md"
+keywords = ["subprocess", "process", "pipeline", "asyncio", "shell"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Shells",
+    "Typing :: Typed",
+]
+dependencies = []
+requires-python = ">=3.12"
+
+[project.urls]
+Repository = "https://github.com/techcode-io/proclet"
+Documentation = "https://github.com/techcode-io/proclet#readme"
+Tracker = "https://github.com/techcode-io/proclet/issues"
+
+[dependency-groups]
+dev = [
+    "poethepoet>=0.36.0",
+    "pre-commit>=4.6.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest>=8.4.1",
+    "ruff>=0.12.4",
+]
+
+[tool.poe.tasks."env:configure"]
+help = "Setup environment."
+cmd = "pre-commit install"
+
+[tool.poe.tasks.lint]
+help = "Lint code project."
+cmd = "ruff check src/proclet"
+
+[tool.poe.tasks.fmt]
+help = "Format code project."
+sequence = [
+  { cmd = "ruff check --select I --fix" },
+  { cmd = "ruff format" }
+]
+
+[tool.poe.tasks."test"]
+help = "Run all tests."
+cmd = "pytest tests"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.poe.tasks.release]
+help = "Create a new proclet release."
+script = "scripts.release:run"
+
+[tool.poe.tasks.ci]
+sequence = [
+    "lint",
+    "test"
+]
+help = "Run CI automation."
+
+[build-system]
+requires = ["uv_build>=0.10.0"]
+build-backend = "uv_build"
