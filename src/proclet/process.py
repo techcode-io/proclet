@@ -1110,6 +1110,7 @@ class Command:
         full_cmds = [stage._full_cmd() for stage in stages]
 
         spawned: list[_PipelineStage] = []
+        finished = 0
         try:
             for index, stage in enumerate(stages):
                 is_first = index == 0
@@ -1144,6 +1145,7 @@ class Command:
                 spawned.append(_PipelineStage(process, io_threads, opened))
 
             for stage, run, full_cmd in zip(stages, spawned, full_cmds, strict=True):
+                finished += 1  # _finish() cleans its stage up even when it raises
                 stage._finish(
                     run.process,
                     full_cmd,
@@ -1155,15 +1157,13 @@ class Command:
                 )
             return spawned[-1].process
         finally:
-            # Anything reached here means _finish() never ran for that stage - if
-            # it's still alive, wait/clean it up now rather than leaking it. A stage
-            # _finish() already handled always polls non-None by this point, so this
-            # is a no-op on the success path - same as pipe(). zip() stops at
-            # `spawned`'s length, so a stage that never got spawned (e.g. because an
-            # earlier one raised CommandNotFound) is simply skipped here.
-            for stage, run in zip(stages, spawned):
-                if run.process.poll() is None:
-                    stage._cleanup(run.process, run.opened, stage.__observers)
+            # Clean up every spawned stage _finish() never got to, running or
+            # already exited, so its files are closed and observers notified.
+            # Nothing is left on the success path. zip() stops at `spawned`'s
+            # length, so a stage that never got spawned (e.g. because an earlier
+            # one raised CommandNotFound) is skipped.
+            for stage, run in zip(stages[finished:], spawned[finished:]):
+                stage._cleanup(run.process, run.opened, stage.__observers)
 
     @staticmethod
     def _pipeline_stage_io_threads(
@@ -1567,6 +1567,7 @@ class Command:
         full_cmds = [stage._full_cmd() for stage in stages]
 
         spawned: list[_AsyncPipelineStage] = []
+        finished = 0
         pending_read_fd: int | None = None
         try:
             for index, stage in enumerate(stages):
@@ -1613,6 +1614,7 @@ class Command:
                 pending_read_fd = next_read_fd
 
             for stage, run, full_cmd in zip(stages, spawned, full_cmds, strict=True):
+                finished += 1  # _afinish() cleans its stage up even when it raises
                 await stage._afinish(
                     run.process,
                     full_cmd,
@@ -1624,12 +1626,10 @@ class Command:
                 )
             return spawned[-1].process
         finally:
-            # zip() stops at `spawned`'s length, so a stage that never got spawned
-            # (e.g. because an earlier one raised CommandNotFound) is simply skipped
-            # here - see the same note in pipeline().
-            for stage, run in zip(stages, spawned):
-                if run.process.returncode is None:
-                    await stage._acleanup(run.process, run.opened, stage.__observers)
+            # Same as pipeline(): clean up every spawned stage _afinish() never
+            # got to, running or already exited.
+            for stage, run in zip(stages[finished:], spawned[finished:]):
+                await stage._acleanup(run.process, run.opened, stage.__observers)
 
     @staticmethod
     def _apipeline_stage_io_tasks(

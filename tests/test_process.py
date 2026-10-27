@@ -907,6 +907,17 @@ class TestCommandPipeline:
             )
         assert exc_info.value.exit_code == 1
 
+    def test_pipeline_cleans_up_stages_exited_after_earlier_failure(
+        self, tmp_path: Path
+    ) -> None:
+        # The last stage exits right away; the first fails later, so _finish()
+        # never runs for the last one.
+        observer = _RecordingObserver()
+        last = Command("true").stdout(tmp_path / "out").add_observer(observer)
+        with pytest.raises(ErrorReturnCode):
+            Command("sh").args("-c", "sleep 0.3; exit 1").pipeline(last)
+        assert len(observer.exited) == 1
+
     def test_pipeline_last_stage_error_return_code(self) -> None:
         # Same reasoning as above: the failing last stage must drain stdin first.
         with pytest.raises(ErrorReturnCode) as exc_info:
@@ -1330,6 +1341,15 @@ class TestCommandApipeline:
                 )
             )
         assert exc_info.value.exit_code == 1
+
+    async def test_apipeline_cleans_up_stages_exited_after_earlier_failure(
+        self, tmp_path: Path
+    ) -> None:
+        observer = _RecordingObserver()
+        last = Command("true").stdout(tmp_path / "out").add_observer(observer)
+        with pytest.raises(ErrorReturnCode):
+            await Command("sh").args("-c", "sleep 0.3; exit 1").apipeline(last)
+        assert len(observer.exited) == 1
 
     async def test_apipeline_last_stage_error_return_code(self) -> None:
         # Same reasoning as above: the failing last stage must drain stdin first.
