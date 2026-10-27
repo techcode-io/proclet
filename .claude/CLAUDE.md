@@ -1,8 +1,11 @@
 # proclet
 
 Public Python 3.12+ library (`uv` + `poe` tasks), published on PyPI as `proclet`.
-Code in `src/proclet/` (`process.py` holds everything public, `_io.py` a private `close`
-helper, `__init__.py` re-exports the public API with `__all__`, `py.typed` ships).
+Code in `src/proclet/`: `process.py` (`Command`, process types, `ProcessObserver`),
+`bind.py` (`Bind`), `env.py` (`EnvCmd`, `PathCmd`), `errors.py` (exceptions),
+`redirect.py` (redirect types, `strip_redirect`). Private modules (`_io.py`, `_platform.py`,
+`_streams.py`) use plain names, no leading underscore. `__init__.py` re-exports the public
+API with `__all__` - `proclet` is the only import path users should rely on. `py.typed` ships.
 No runtime dependencies - keep it that way.
 
 ## Commands
@@ -52,13 +55,13 @@ No runtime dependencies - keep it that way.
 - `user`/`group`/`extra_groups` pass straight to `subprocess.Popen`/
   `asyncio.create_subprocess_exec`. `extra_groups`: `None` keeps the parent's groups, `[]`
   drops them; never default it to `[]` - `setgroups` fails for non-root. They are POSIX
-  only: their setters raise `ValueError` (via `_require_os`) where `os` lacks the call.
+  only: their setters raise `ValueError` (via `_platform.require_os`) where `os` lacks the call.
 - `search_path` restricts binary lookup to given directories instead of `PATH` (ignored
   when `cmd_path` is a `Path`).
-- `nice(...)` uses a `preexec_fn` built by `_low_priority_hook`: everything is resolved
+- `nice(...)` uses a `preexec_fn` built by `_platform.low_priority_hook`: everything is resolved
   before the fork so the hook only makes plain syscalls; the Linux idle IO class is best
   effort (skipped off Linux / unknown machines). Windows has no `preexec_fn`: there
-  `_priority_creationflags` maps the niceness to a priority class via `creationflags`.
+  `_platform.priority_creationflags` maps the niceness to a priority class via `creationflags`.
 - `pipeline`/`apipeline` connect stages with raw OS pipes (binary safe, no decoding).
   Thread/task forwarding is only used for Python-facing ends (callables, `StringIO`,
   queues, strings).
