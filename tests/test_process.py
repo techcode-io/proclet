@@ -23,7 +23,7 @@ from proclet import (
     Process,
     TimeoutException,
 )
-from proclet.process import _low_priority_hook, _priority_creationflags
+from proclet._platform import low_priority_hook, priority_creationflags
 
 
 class _RecordingObserver:
@@ -1752,8 +1752,8 @@ class TestNice:
         assert buf.getvalue().strip() == str(base + 5)
 
     def test_no_creationflags_off_windows(self) -> None:
-        assert _priority_creationflags(19) == 0
-        assert _priority_creationflags(None) == 0
+        assert priority_creationflags(19) == 0
+        assert priority_creationflags(None) == 0
 
     @pytest.mark.parametrize(
         ("nice", "expected"),
@@ -1784,11 +1784,11 @@ class TestNice:
             start=1,
         ):
             monkeypatch.setattr(subprocess, name, value, raising=False)
-        assert _priority_creationflags(nice) == expected
+        assert priority_creationflags(nice) == expected
 
     def test_no_preexec_hook_on_windows(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(sys, "platform", "win32")
-        assert _low_priority_hook(5) is None
+        assert low_priority_hook(5) is None
 
 
 class TestPosixOnlyOptions:

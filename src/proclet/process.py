@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import ctypes
 import os
-import platform
 import queue
 import shutil
 import subprocess
@@ -17,6 +15,7 @@ from threading import Thread
 from typing import IO, NamedTuple, Protocol, Self, TextIO, overload
 
 from proclet._io import close
+from proclet._platform import low_priority_hook, priority_creationflags, require_os
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
 
 # Type aliases for process types
@@ -79,89 +78,6 @@ def strip_redirect(log_fn: Callable[[str], None]) -> Callable[[str], None]:
         a callable to pass to `Command.stdout()`/`Command.stderr()`.
     """
     return lambda line: log_fn(line.rstrip("\n"))
-
-
-# `ioprio_set` syscall numbers by machine; unknown machines skip the IO class.
-_IOPRIO_SYSCALL = {"x86_64": 251, "aarch64": 30}
-_IOPRIO_WHO_PROCESS = 1
-_IOPRIO_CLASS_IDLE = 3
-_IOPRIO_CLASS_SHIFT = 13
-
-
-def _low_priority_hook(nice: int | None) -> Callable[[], None] | None:
-    """Build the `preexec_fn` lowering CPU (and, on Linux, IO) priority of a child.
-
-    Everything the hook needs is resolved here, before the fork, so the hook
-    itself only makes plain syscalls. IO priority is best effort: it is
-    skipped off Linux and on unknown machines, and failures are ignored.
-    Windows has no `preexec_fn`; see `_priority_creationflags` instead.
-
-    Args:
-        nice: niceness to apply, `None` for no change.
-    Returns:
-        the hook, or `None` when no priority change is requested or on Windows.
-    """
-    if nice is None or sys.platform == "win32":
-        return None
-
-    syscall = None
-    number = (
-        _IOPRIO_SYSCALL.get(platform.machine()) if sys.platform == "linux" else None
-    )
-    if number is not None:
-        with suppress(OSError, AttributeError):
-            syscall = ctypes.CDLL(None, use_errno=True).syscall
-
-    def hook() -> None:
-        os.setpriority(os.PRIO_PROCESS, 0, nice)
-        if syscall is not None:
-            syscall(
-                number,
-                _IOPRIO_WHO_PROCESS,
-                0,
-                _IOPRIO_CLASS_IDLE << _IOPRIO_CLASS_SHIFT,
-            )
-
-    return hook
-
-
-def _priority_creationflags(nice: int | None) -> int:
-    """Map a niceness to the Windows priority class of a child.
-
-    Windows has no niceness, only a handful of priority classes, so the value
-    is bucketed: >= 15 idle, 1..14 below normal, 0 unchanged, -14..-1 above
-    normal, <= -15 high (never realtime).
-
-    Args:
-        nice: niceness to apply, `None` for no change.
-    Returns:
-        the `creationflags` to pass on spawn, `0` off Windows or for no change.
-    """
-    if nice is None or nice == 0 or sys.platform != "win32":
-        return 0
-    if nice >= 15:
-        name = "IDLE_PRIORITY_CLASS"
-    elif nice > 0:
-        name = "BELOW_NORMAL_PRIORITY_CLASS"
-    elif nice > -15:
-        name = "ABOVE_NORMAL_PRIORITY_CLASS"
-    else:
-        name = "HIGH_PRIORITY_CLASS"
-    # Only defined on Windows.
-    return getattr(subprocess, name)
-
-
-def _require_os(option: str, func: str) -> None:
-    """Fail fast when the platform can't apply a POSIX-only spawn option.
-
-    Args:
-        option: name of the option being set, for the error message.
-        func: `os` function the option relies on, e.g. `setgroups`.
-    Raises:
-        ValueError: if `os` lacks `func` (e.g. on Windows).
-    """
-    if not hasattr(os, func):
-        raise ValueError(f"'{option}' is only supported on POSIX platforms")
 
 
 def _needs_forwarding(redirect: RedirectOut | None) -> bool:
@@ -369,7 +285,7 @@ class Command:
         if value is None:
             return self.__user
 
-        _require_os("user", "setreuid")
+        require_os("user", "setreuid")
         self.__user = value
         return self
 
@@ -395,7 +311,7 @@ class Command:
         if value is None:
             return self.__group
 
-        _require_os("group", "setregid")
+        require_os("group", "setregid")
         self.__group = value
         return self
 
@@ -423,7 +339,7 @@ class Command:
         if value is None:
             return None if self.__extra_groups is None else list(self.__extra_groups)
 
-        _require_os("extra_groups", "setgroups")
+        require_os("extra_groups", "setgroups")
         self.__extra_groups = list(value)
         return self
 
@@ -740,9 +656,9 @@ class Command:
                 user=self.__user,
                 group=self.__group,
                 extra_groups=self.__extra_groups,
-                # Only plain syscalls, resolved before the fork (see _low_priority_hook).
-                preexec_fn=_low_priority_hook(self.__nice),  # noqa: PLW1509
-                creationflags=_priority_creationflags(self.__nice),
+                # Only plain syscalls, resolved before the fork (see low_priority_hook).
+                preexec_fn=low_priority_hook(self.__nice),  # noqa: PLW1509
+                creationflags=priority_creationflags(self.__nice),
             )
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
@@ -1202,8 +1118,8 @@ class Command:
                 user=self.__user,
                 group=self.__group,
                 extra_groups=self.__extra_groups,
-                preexec_fn=_low_priority_hook(self.__nice),
-                creationflags=_priority_creationflags(self.__nice),
+                preexec_fn=low_priority_hook(self.__nice),
+                creationflags=priority_creationflags(self.__nice),
             )
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
