@@ -283,6 +283,10 @@ def _needs_forwarding(redirect: RedirectOut | None) -> bool:
     return False
 
 
+# Read size used to feed a file object without a real fd (e.g. StringIO) to stdin.
+_STDIN_CHUNK_SIZE = 64 * 1024
+
+
 def _encode_input(data: bytes | str) -> bytes:
     """Encode stdin input, passing bytes through untouched."""
     return data if isinstance(data, bytes) else data.encode()
@@ -694,8 +698,9 @@ class Command:
         """Convert the configured stdin redirect into a file descriptor or subprocess constant.
 
         Returns:
-            fileno of a TextIO redirect, subprocess.PIPE for Queue, str or bytes input,
-            or subprocess.DEVNULL when no stdin is configured.
+            fileno of a file object backed by a real fd, subprocess.PIPE for input
+            fed from Python (Queue, str, bytes or a file object without a real
+            fd, e.g. StringIO), or subprocess.DEVNULL when no stdin is configured.
         """
         if self.__in is None:
             return subprocess.DEVNULL
@@ -704,7 +709,7 @@ class Command:
         try:
             return self.__in.fileno()
         except (OSError, AttributeError):
-            return subprocess.DEVNULL
+            return subprocess.PIPE
 
     @staticmethod
     def _prepare_redirect(
@@ -791,11 +796,12 @@ class Command:
         return Thread(target=forward, daemon=True)
 
     def _handle_stdin(self, process: SyncProcess) -> Thread | None:
-        """Start a thread feeding stdin from a Queue or string.
+        """Start a thread feeding stdin from a Queue, str, bytes or fd-less file.
 
         Feeding happens off the calling thread so a child blocked on a full
         stdout/stderr pipe can't deadlock the write. A child that exits
-        without reading all of its input just stops the feeding.
+        without reading all of its input, or a file that can't be read, just
+        stops the feeding.
 
         Args:
             process: the subprocess to feed stdin to.
@@ -804,18 +810,21 @@ class Command:
         """
         stdin = process.stdin
         source = self.__in
-        if stdin is None or not isinstance(source, (queue.Queue, str, bytes)):
+        if stdin is None or source is None or isinstance(source, asyncio.Queue):
             return None
 
         def chunks() -> Iterator[bytes]:
             if isinstance(source, (str, bytes)):
                 yield _encode_input(source)
-                return
-            while (data := source.get()) is not None:
-                yield _encode_input(data)
+            elif isinstance(source, queue.Queue):
+                while (data := source.get()) is not None:
+                    yield _encode_input(data)
+            else:
+                while data := source.read(_STDIN_CHUNK_SIZE):
+                    yield _encode_input(data)
 
         def forward() -> None:
-            with suppress(BrokenPipeError):
+            with suppress(OSError):
                 for chunk in chunks():
                     stdin.write(chunk)
             close([stdin])
@@ -1245,11 +1254,11 @@ class Command:
         return create_task(forward())
 
     def _async_handle_stdin(self, process: AsyncProcess) -> Task[None] | None:
-        """Start a task feeding stdin from a Queue or string.
+        """Start a task feeding stdin from a Queue, str, bytes or fd-less file.
 
         Feeding happens in its own task so the configured timeout covers it.
-        A child that exits without reading all of its input just stops the
-        feeding.
+        A child that exits without reading all of its input, or a file that
+        can't be read, just stops the feeding.
 
         Args:
             process: the asyncio subprocess to feed stdin to.
@@ -1258,23 +1267,26 @@ class Command:
         """
         stdin = process.stdin
         source = self.__in
-        if stdin is None or not isinstance(source, (asyncio.Queue, str, bytes)):
+        if stdin is None or source is None or isinstance(source, queue.Queue):
             return None
 
         async def chunks() -> AsyncIterator[bytes]:
             if isinstance(source, (str, bytes)):
                 yield _encode_input(source)
-                return
-            while (data := await source.get()) is not None:
-                yield _encode_input(data)
+            elif isinstance(source, asyncio.Queue):
+                while (data := await source.get()) is not None:
+                    yield _encode_input(data)
+            else:
+                while data := source.read(_STDIN_CHUNK_SIZE):
+                    yield _encode_input(data)
 
         async def forward() -> None:
-            with suppress(BrokenPipeError, ConnectionResetError):
+            with suppress(OSError):
                 async for chunk in chunks():
                     stdin.write(chunk)
                     await stdin.drain()
             stdin.close()
-            with suppress(BrokenPipeError, ConnectionResetError):
+            with suppress(OSError):
                 await stdin.wait_closed()
 
         return asyncio.create_task(forward())

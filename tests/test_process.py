@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 from asyncio import Queue as AsyncQueue
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from queue import Queue
 from typing import Callable
@@ -390,6 +390,17 @@ class TestCommand:
         Command("cat").stdin(payload).stdout(out).timeout(10).exec()
         assert out.getvalue() == payload
 
+    def test_exec_stdin_from_stringio(self) -> None:
+        out = StringIO()
+        Command("cat").stdin(StringIO("hello from StringIO\n")).stdout(out).exec()
+        assert out.getvalue() == "hello from StringIO\n"
+
+    def test_exec_stdin_from_bytesio(self, tmp_path: Path) -> None:
+        payload = bytes(range(256)) * 512
+        out = tmp_path / "out.bin"
+        Command("cat").stdin(BytesIO(payload)).stdout(out).exec()
+        assert out.read_bytes() == payload
+
     def test_exec_stdin_from_bytes(self) -> None:
         payload = bytes(range(256))
         out = StringIO()
@@ -541,6 +552,11 @@ class TestCommand:
         out = StringIO()
         await Command("cat").stdin(payload).stdout(out).timeout(10).aexec()
         assert out.getvalue() == payload
+
+    async def test_aexec_stdin_from_stringio(self) -> None:
+        out = StringIO()
+        await Command("cat").stdin(StringIO("async StringIO\n")).stdout(out).aexec()
+        assert out.getvalue() == "async StringIO\n"
 
     async def test_aexec_stdin_from_bytes(self) -> None:
         payload = bytes(range(256))
