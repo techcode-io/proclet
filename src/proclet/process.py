@@ -371,6 +371,9 @@ class Command:
         """
         Returns current arguments if no value is provided, otherwise set arguments.
 
+        Setting replaces the previous arguments. Calling with no value reads
+        them, so arguments can't be cleared back to none this way.
+
         Args:
             *values: arguments to set.
         Returns:
@@ -551,6 +554,12 @@ class Command:
         """
         Returns current stdin if no value is provided, otherwise set stdin.
 
+        Accepts a `str` (encoded as UTF-8) or `bytes` payload, a file object
+        (one with a real fd is handed to the child, others such as `StringIO`
+        are read and fed), or a queue fed until it yields `None`: a
+        `queue.Queue` for `exec()`/`pipeline()`, an `asyncio.Queue` for
+        `aexec()`/`apipeline()`. Unset, the child reads from /dev/null.
+
         Args:
             value: stdin to set.
         Returns:
@@ -571,6 +580,10 @@ class Command:
     def stdout(self, value: RedirectOut | None = None) -> RedirectOut | None | Self:
         """
         Returns current stdout if no value is provided, otherwise set stdout.
+
+        Accepts a `Path` (truncated and written; a relative one is resolved
+        against the current directory now, not against `cwd()`), a file object,
+        or a callable receiving each decoded line. Unset, output is discarded.
 
         Args:
             value: stdout to set.
@@ -594,6 +607,8 @@ class Command:
     def stderr(self, value: RedirectOut | None = None) -> RedirectOut | None | Self:
         """
         Returns current stderr if no value is provided, otherwise set stderr.
+
+        Accepts the same targets as `stdout()`.
 
         Args:
             value: stderr to set.
@@ -685,7 +700,16 @@ class Command:
         return self
 
     def copy(self, cmd: Command) -> Self:
-        """Copy all parameters from another command."""
+        """
+        Copy all parameters from another command, keeping this one's binary.
+
+        Collections are copied; redirect targets and observers are shared.
+
+        Args:
+            cmd: the command to copy parameters from.
+        Returns:
+            self for chaining.
+        """
         self.__env = None if cmd.__env is None else cmd.__env.copy()
         self.__cwd = cmd.__cwd
         self.__args = cmd.__args
@@ -1953,7 +1977,14 @@ class Bind:
         return self._cmd.binary_path()
 
     def copy(self, cmd: Command) -> Self:
-        """Copy all parameters from another command."""
+        """
+        Copy all parameters from another command, see `Command.copy()`.
+
+        Args:
+            cmd: the command to copy parameters from.
+        Returns:
+            self for chaining.
+        """
         self._cmd.copy(cmd)
         return self
 
