@@ -283,6 +283,9 @@ def _needs_forwarding(redirect: RedirectOut | None) -> bool:
     return False
 
 
+# Strong references to fire-and-forget tasks, so they can't be collected mid-run.
+_background_tasks: set[Task[None]] = set()
+
 # Read size used to feed a file object without a real fd (e.g. StringIO) to stdin.
 _STDIN_CHUNK_SIZE = 64 * 1024
 
@@ -1404,7 +1407,10 @@ class Command:
                 for obs in observers:
                     obs.on_exit(process)
 
-        create_task(garbage_collector())
+        # The event loop only keeps weak references to tasks.
+        task = create_task(garbage_collector())
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
     @staticmethod
     async def _acleanup(
