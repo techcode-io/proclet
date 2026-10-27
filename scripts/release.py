@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Final
 
-PROJECT_PATH: Final = Path(__file__).resolve().parent.parent / "pyproject.toml"
+PROJECT_PATH: Final[Path] = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
 
 def _git(*args: str) -> None:

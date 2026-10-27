@@ -7,16 +7,18 @@ import os
 import platform
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import suppress
 from types import MappingProxyType
 from typing import Final
 
 # `ioprio_set` syscall numbers by machine; unknown machines skip the IO class.
-_IOPRIO_SYSCALL: Final = MappingProxyType({"x86_64": 251, "aarch64": 30})
-_IOPRIO_WHO_PROCESS: Final = 1
-_IOPRIO_CLASS_IDLE: Final = 3
-_IOPRIO_CLASS_SHIFT: Final = 13
+_IOPRIO_SYSCALL: Final[Mapping[str, int]] = MappingProxyType(
+    {"x86_64": 251, "aarch64": 30}
+)
+_IOPRIO_WHO_PROCESS: Final[int] = 1
+_IOPRIO_CLASS_IDLE: Final[int] = 3
+_IOPRIO_CLASS_SHIFT: Final[int] = 13
 
 
 def low_priority_hook(nice: int | None) -> Callable[[], None] | None:

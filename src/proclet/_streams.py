@@ -26,7 +26,7 @@ def needs_forwarding(redirect: RedirectOut | None) -> bool:
 
 
 # Read size used to feed a file object without a real fd (e.g. StringIO) to stdin.
-STDIN_CHUNK_SIZE: Final = 64 * 1024
+STDIN_CHUNK_SIZE: Final[int] = 64 * 1024
 
 
 def encode_input(data: bytes | str) -> bytes:
