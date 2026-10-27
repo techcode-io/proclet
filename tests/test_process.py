@@ -362,6 +362,17 @@ class TestCommand:
         cmd.exec()
         assert any("hello from stdin" in line for line in lines)
 
+    @pytest.mark.filterwarnings("error::pytest.PytestUnhandledThreadExceptionWarning")
+    def test_exec_stdin_string_tolerates_child_not_reading(self) -> None:
+        Command("true").stdin("x" * (1 << 20)).exec()
+
+    @pytest.mark.filterwarnings("error::pytest.PytestUnhandledThreadExceptionWarning")
+    def test_exec_stdin_queue_tolerates_child_not_reading(self) -> None:
+        q: Queue[bytes | str | None] = Queue()
+        q.put("x" * (1 << 20))
+        q.put(None)
+        Command("true").stdin(q).exec()
+
     def test_exec_large_stdin_string_does_not_deadlock(self) -> None:
         # Larger than any pipe buffer: stdout must be drained while stdin is fed.
         payload = "x" * (1 << 20)
@@ -477,6 +488,15 @@ class TestCommand:
         cmd.stdout(lines.append)
         await cmd.aexec()
         assert any("async stdin" in line for line in lines)
+
+    async def test_aexec_stdin_string_tolerates_child_not_reading(self) -> None:
+        await Command("true").stdin("x" * (1 << 20)).aexec()
+
+    async def test_aexec_stdin_queue_tolerates_child_not_reading(self) -> None:
+        q: AsyncQueue[bytes | str | None] = AsyncQueue()
+        q.put_nowait("x" * (1 << 20))
+        q.put_nowait(None)
+        await Command("true").stdin(q).aexec()
 
     async def test_aexec_stdout_line_longer_than_stream_limit(self) -> None:
         payload = "x" * (1 << 20)

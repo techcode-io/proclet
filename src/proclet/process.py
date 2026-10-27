@@ -10,7 +10,7 @@ import subprocess
 import sys
 import threading
 from asyncio import Task, create_task, gather
-from collections.abc import Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
 from contextlib import suppress
 from io import IOBase, TextIOBase
 from pathlib import Path
@@ -276,6 +276,11 @@ def _needs_forwarding(redirect: RedirectOut | None) -> bool:
         except (OSError, AttributeError):
             return True
     return False
+
+
+def _encode_input(data: bytes | str) -> bytes:
+    """Encode a stdin queue item, passing bytes through untouched."""
+    return data if isinstance(data, bytes) else data.encode()
 
 
 async def _read_line(stream: asyncio.StreamReader) -> bytes:
@@ -778,7 +783,8 @@ class Command:
         """Start a thread feeding stdin from a Queue or string.
 
         Feeding happens off the calling thread so a child blocked on a full
-        stdout/stderr pipe can't deadlock the write.
+        stdout/stderr pipe can't deadlock the write. A child that exits
+        without reading all of its input just stops the feeding.
 
         Args:
             process: the subprocess to feed stdin to.
@@ -786,30 +792,22 @@ class Command:
             the started thread, or None when stdin isn't fed from Python.
         """
         stdin = process.stdin
-        if stdin is None:
+        source = self.__in
+        if stdin is None or not isinstance(source, (queue.Queue, str)):
             return None
-        if isinstance(self.__in, queue.Queue):
-            sync_queue = self.__in
 
-            def forward() -> None:
-                while True:
-                    data = sync_queue.get()
-                    if data is None:
-                        break
-                    encoded: bytes = data if isinstance(data, bytes) else data.encode()
-                    stdin.write(encoded)
-                    stdin.flush()
-                stdin.close()
+        def chunks() -> Iterator[bytes]:
+            if isinstance(source, str):
+                yield source.encode()
+                return
+            while (data := source.get()) is not None:
+                yield _encode_input(data)
 
-        elif isinstance(self.__in, str):
-            payload = self.__in.encode()
-
-            def forward() -> None:
-                stdin.write(payload)
-                stdin.close()
-
-        else:
-            return None
+        def forward() -> None:
+            with suppress(BrokenPipeError):
+                for chunk in chunks():
+                    stdin.write(chunk)
+            close([stdin])
 
         thread = threading.Thread(target=forward, daemon=True)
         thread.start()
@@ -1239,6 +1237,8 @@ class Command:
         """Start a task feeding stdin from a Queue or string.
 
         Feeding happens in its own task so the configured timeout covers it.
+        A child that exits without reading all of its input just stops the
+        feeding.
 
         Args:
             process: the asyncio subprocess to feed stdin to.
@@ -1246,33 +1246,25 @@ class Command:
             the created task, or None when stdin isn't fed from Python.
         """
         stdin = process.stdin
-        if stdin is None:
+        source = self.__in
+        if stdin is None or not isinstance(source, (asyncio.Queue, str)):
             return None
-        if isinstance(self.__in, asyncio.Queue):
-            async_queue = self.__in
 
-            async def forward() -> None:
-                while True:
-                    data = await async_queue.get()
-                    if data is None:
-                        break
-                    encoded: bytes = data if isinstance(data, bytes) else data.encode()
-                    stdin.write(encoded)
+        async def chunks() -> AsyncIterator[bytes]:
+            if isinstance(source, str):
+                yield source.encode()
+                return
+            while (data := await source.get()) is not None:
+                yield _encode_input(data)
+
+        async def forward() -> None:
+            with suppress(BrokenPipeError, ConnectionResetError):
+                async for chunk in chunks():
+                    stdin.write(chunk)
                     await stdin.drain()
-                stdin.close()
+            stdin.close()
+            with suppress(BrokenPipeError, ConnectionResetError):
                 await stdin.wait_closed()
-
-        elif isinstance(self.__in, str):
-            payload = self.__in.encode()
-
-            async def forward() -> None:
-                stdin.write(payload)
-                await stdin.drain()
-                stdin.close()
-                await stdin.wait_closed()
-
-        else:
-            return None
 
         return asyncio.create_task(forward())
 
