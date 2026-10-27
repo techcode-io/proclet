@@ -94,6 +94,16 @@ class TestPathCmd:
         assert parts[0] == "/opt/bin"
         assert parts[1] == "/usr/local/bin"
 
+    def test_inherit_without_path_has_no_empty_entry(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("PATH")
+        assert PathCmd.inherit().add("/usr/bin").build() == "/usr/bin"
+
+    def test_inherit_drops_empty_entries(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("PATH", os.pathsep.join(["/a", "", "/b", ""]))
+        assert PathCmd.inherit().build() == os.pathsep.join(["/a", "/b"])
+
     def test_add_returns_self(self) -> None:
         path = PathCmd.empty()
         returned = path.add("/bin")

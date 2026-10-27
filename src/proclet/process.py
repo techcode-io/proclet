@@ -246,7 +246,10 @@ class PathCmd:
     def inherit() -> PathCmd:
         """Create a path command that inherit the PATH environment variable from the current process."""
         path = PathCmd()
-        path.__build = os.environ.get("PATH", "").split(os.pathsep)
+        # Drop empty entries: they mean the current directory to a PATH lookup.
+        path.__build = [
+            entry for entry in os.environ.get("PATH", "").split(os.pathsep) if entry
+        ]
         return path
 
     def add(self, value: str) -> Self:
