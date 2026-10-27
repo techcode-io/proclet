@@ -333,7 +333,8 @@ class Command:
                 raise CommandNotFound(cmd_path)
             self.__cmd_path = found_path
         self.__cwd = Path.cwd()
-        self.__env: dict[str, str] = {}
+        # None inherits the parent's environment; {} is an empty one.
+        self.__env: dict[str, str] | None = None
         self.__args: tuple[str, ...] = ()
         self.__in: RedirectIn | None = None
         self.__out: RedirectOut | None = None
@@ -377,15 +378,20 @@ class Command:
         """
         Returns current env vars if no value is provided, otherwise set env vars.
 
+        Until env vars are set, the command inherits the parent's environment
+        and the getter returns `{}`. Once set, the command gets exactly that
+        environment: an empty dict really runs it with no env vars, so build
+        on `EnvCmd.inherit()` to keep the parent's.
+
         Args:
             value: env vars to set.
         Returns:
             current env vars if no value is provided or self for chaining.
         """
         if value is None:
-            return self.__env.copy()
+            return {} if self.__env is None else self.__env.copy()
 
-        self.__env = value
+        self.__env = dict(value)
         return self
 
     @overload
@@ -645,7 +651,7 @@ class Command:
 
     def copy(self, cmd: Command) -> Self:
         """Copy all parameters from another command."""
-        self.__env = cmd.__env.copy()
+        self.__env = None if cmd.__env is None else cmd.__env.copy()
         self.__cwd = cmd.__cwd
         self.__args = cmd.__args
         self.__in = cmd.__in
@@ -736,7 +742,7 @@ class Command:
         try:
             return subprocess.Popen(
                 [self.__cmd_path, *self.__args],
-                env=self.__env if self.__env else None,
+                env=self.__env,
                 cwd=self.__cwd.as_posix(),
                 stdin=stdin,
                 stdout=stdout,
@@ -1191,7 +1197,7 @@ class Command:
             return await asyncio.create_subprocess_exec(
                 self.__cmd_path,
                 *self.__args,
-                env=self.__env if self.__env else None,
+                env=self.__env,
                 cwd=self.__cwd.as_posix(),
                 stdin=stdin,
                 stdout=stdout,

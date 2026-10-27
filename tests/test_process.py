@@ -402,6 +402,22 @@ class TestCommand:
         cmd.exec()
         assert any("my_value" in line for line in lines)
 
+    def test_exec_without_env_inherits_parent_env(self) -> None:
+        out = StringIO()
+        Command("env").stdout(out).exec()
+        assert f"PATH={os.environ['PATH']}" in out.getvalue().splitlines()
+
+    def test_exec_with_empty_env_runs_without_env_vars(self) -> None:
+        out = StringIO()
+        Command("env").env(EnvCmd.empty().build()).stdout(out).exec()
+        assert out.getvalue() == ""
+
+    def test_env_setter_copies_value(self) -> None:
+        env = {"FOO": "bar"}
+        cmd = Command("echo").env(env)
+        env["LATE"] = "x"
+        assert cmd.env() == {"FOO": "bar"}
+
     def test_exec_with_cwd(self, tmp_path: Path) -> None:
         lines: list[str] = []
         cmd = Command("pwd")
@@ -531,6 +547,11 @@ class TestCommand:
         cmd.stdout(lines.append)
         await cmd.aexec()
         assert any("async_val" in line for line in lines)
+
+    async def test_aexec_with_empty_env_runs_without_env_vars(self) -> None:
+        out = StringIO()
+        await Command("env").env({}).stdout(out).aexec()
+        assert out.getvalue() == ""
 
     async def test_aexec_with_cwd(self, tmp_path: Path) -> None:
         lines: list[str] = []
