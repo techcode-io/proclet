@@ -302,6 +302,11 @@ class TestCommand:
         assert exc_info.value.timeout == 1
         assert "sleep" in exc_info.value.cmd
 
+    def test_exec_accepts_fractional_timeout(self) -> None:
+        with pytest.raises(TimeoutException) as exc_info:
+            Command("sleep").args("10").timeout(0.2).exec()
+        assert exc_info.value.timeout == 0.2
+
     def test_timeout_exception_properties(self) -> None:
         err = TimeoutException(cmd="mycmd", timeout=5.0)
         assert err.cmd == "mycmd"

@@ -370,7 +370,7 @@ class Command:
         self.__in: RedirectIn | None = None
         self.__out: RedirectOut | None = None
         self.__err: RedirectOut | None = None
-        self.__timeout: int | None = None
+        self.__timeout: float | None = None
         self.__ok_exit_codes: frozenset[int] = frozenset({0})
         self.__user: str | int | None = None
         self.__group: str | int | None = None
@@ -652,8 +652,20 @@ class Command:
             self.__err = sys.stderr
         return self
 
-    def timeout(self, timeout: int) -> Self:
-        """Set a timeout for process to spawn."""
+    def timeout(self, timeout: float) -> Self:
+        """
+        Set how long a run may take before `TimeoutException` is raised.
+
+        The process is terminated once it elapses. Only enforced when the run
+        waits for completion: `exec(wait_completion=False)` and
+        `aexec(wait_completion=False)` ignore it. In a pipeline each stage keeps
+        its own timeout, counted from when the previous stage finished.
+
+        Args:
+            timeout: maximum run time, in seconds.
+        Returns:
+            self for chaining.
+        """
         self.__timeout = timeout
         return self
 
@@ -1003,7 +1015,7 @@ class Command:
     def _finish(
         process: SyncProcess,
         full_cmd: str,
-        timeout: int | None,
+        timeout: float | None,
         io_threads: list[Thread],
         opened_files: list[IO[bytes]],
         observers: list[ProcessObserver],
@@ -1460,7 +1472,7 @@ class Command:
     async def _afinish(
         process: AsyncProcess,
         full_cmd: str,
-        timeout: int | None,
+        timeout: float | None,
         io_tasks: list[Task[None]],
         opened_files: list[IO[bytes]],
         observers: list[ProcessObserver],
@@ -1908,8 +1920,15 @@ class Bind:
         self._cmd.inherit_out(if_unset=if_unset)
         return self
 
-    def timeout(self, timeout: int) -> Self:
-        """Set a timeout for process to spawn."""
+    def timeout(self, timeout: float) -> Self:
+        """
+        Set how long a run may take, see `Command.timeout()`.
+
+        Args:
+            timeout: maximum run time, in seconds.
+        Returns:
+            self for chaining.
+        """
         self._cmd.timeout(timeout)
         return self
 
