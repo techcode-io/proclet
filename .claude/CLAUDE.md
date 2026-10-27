@@ -70,6 +70,11 @@ No runtime dependencies - keep it that way.
 - `Command` pairs sync/async implementations (`exec`/`aexec`, `pipe`/`apipe`,
   `pipeline`/`apipeline`) in one class, sharing small private static helpers between the
   two paths - follow this pattern for new dual-mode features.
+- The asyncio counterpart of a sync method takes the same name with an `a` prefix
+  (`_finish`/`_afinish`, `_start_io`/`_astart_io`), never a `_threads`/`_tasks` suffix.
+  The prefix means "asyncio side", not "coroutine": `_ahandle_stdin` and
+  `_areap_in_background` are plain `def`s returning tasks - don't turn them into
+  `async def`. Helpers named `_start_*`/`_handle_*` start their thread/task.
 - Private functions/methods use a single leading underscore (`_foo`), not double
   (`__foo`). Existing instance attributes still use `self.__x`; don't spread that to new
   methods.
