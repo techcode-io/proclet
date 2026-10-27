@@ -292,6 +292,25 @@ def _encode_input(data: bytes | str) -> bytes:
     return data if isinstance(data, bytes) else data.encode()
 
 
+def _dispatch_line(target: RedirectOut, line: bytes) -> None:
+    """
+    Hand one line of process output to a forwarded redirect target.
+
+    Callables and text streams get the line decoded (invalid bytes replaced);
+    binary streams without a real fd (e.g. BytesIO) get the raw bytes.
+
+    Args:
+        target: the redirect target, one that `_needs_forwarding` accepted.
+        line: the raw line read from the process.
+    """
+    if callable(target):
+        target(line.decode(errors="replace"))
+    elif isinstance(target, TextIOBase):
+        target.write(line.decode(errors="replace"))
+    elif isinstance(target, IOBase):
+        target.write(line)
+
+
 async def _read_line(stream: asyncio.StreamReader) -> bytes:
     """
     Read one line of any length, like the sync forwarder's `readline()`.
@@ -774,8 +793,7 @@ class Command:
 
         Args:
             stream: binary readable stream to read from (e.g. process stdout or stderr pipe).
-            target: destination to write decoded lines to; either a callable accepting a str,
-                    or a TextIOBase instance (e.g. StringIO).
+            target: destination for the lines, see `_dispatch_line`.
         Returns:
             daemon thread, not yet started.
         """
@@ -783,11 +801,7 @@ class Command:
         def forward() -> None:
             try:
                 for line in iter(stream.readline, b""):
-                    decoded = line.decode(errors="replace")
-                    if callable(target):
-                        target(decoded)
-                    elif isinstance(target, TextIOBase):
-                        target.write(decoded)
+                    _dispatch_line(target, line)
             except (OSError, ValueError):
                 pass
             finally:
@@ -1234,7 +1248,7 @@ class Command:
 
         Args:
             stream: the stream reader to forward from (stdout or stderr).
-            target: the target destination (callable or TextIOBase).
+            target: destination for the lines, see `_dispatch_line`.
         """
 
         async def forward() -> None:
@@ -1243,11 +1257,7 @@ class Command:
                     line = await _read_line(stream)
                     if not line:
                         break
-                    decoded = line.decode(errors="replace")
-                    if callable(target):
-                        target(decoded)
-                    elif isinstance(target, TextIOBase):
-                        target.write(decoded)
+                    _dispatch_line(target, line)
             except (OSError, ValueError):
                 pass
 

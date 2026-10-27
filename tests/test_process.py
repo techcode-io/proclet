@@ -348,6 +348,12 @@ class TestCommand:
         cmd.exec()
         assert "err_content" in err_file.read_text()
 
+    def test_exec_stdout_to_bytesio(self) -> None:
+        payload = bytes(range(256)) * 512
+        out = BytesIO()
+        Command("cat").stdin(payload).stdout(out).exec()
+        assert out.getvalue() == payload
+
     def test_exec_stdout_to_binary_file_object(self, tmp_path: Path) -> None:
         # A real fd-backed binary file object (e.g. Path.open("wb")) must be used
         # directly, not silently dropped into an undrained pipe.
@@ -507,6 +513,12 @@ class TestCommand:
         cmd.stdout(out_file)
         await cmd.aexec()
         assert "async file output" in out_file.read_text()
+
+    async def test_aexec_stdout_to_bytesio(self) -> None:
+        payload = bytes(range(256)) * 512
+        out = BytesIO()
+        await Command("cat").stdin(payload).stdout(out).aexec()
+        assert out.getvalue() == payload
 
     async def test_aexec_stdout_to_binary_file_object(self, tmp_path: Path) -> None:
         # A real fd-backed binary file object used to fall through to DEVNULL in
