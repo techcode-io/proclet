@@ -1415,14 +1415,17 @@ class Command:
     @staticmethod
     async def _acleanup(
         process: AsyncProcess,
+        io_tasks: list[Task[None]],
         opened_files: list[IO[bytes]],
         observers: list[ProcessObserver],
     ) -> None:
-        """Async equivalent of `_cleanup`: close opened redirect files and
-        terminate/kill a process if still alive.
+        """Async equivalent of `_cleanup`: close opened redirect files,
+        terminate/kill a process if still alive and cancel its pending I/O tasks.
 
         Args:
             process: the asyncio subprocess to clean up.
+            io_tasks: I/O forwarding tasks, cancelled if still pending (e.g. a
+                stdin queue never fed its `None` sentinel).
             opened_files: file handles to close.
             observers: observers to notify once the process has exited.
         """
@@ -1433,6 +1436,9 @@ class Command:
                 await asyncio.wait_for(process.wait(), timeout=10)
             except TimeoutError:
                 process.kill()
+        for task in io_tasks:
+            task.cancel()
+        await gather(*io_tasks, return_exceptions=True)
         for obs in observers:
             obs.on_exit(process)
 
@@ -1475,7 +1481,7 @@ class Command:
             if Command._is_failure(process.returncode, ok_exit_codes):
                 raise ErrorReturnCode(cmd=full_cmd, exit_code=process.returncode)
         finally:
-            await Command._acleanup(process, opened_files, observers)
+            await Command._acleanup(process, io_tasks, opened_files, observers)
 
     async def aexec(self, wait_completion: bool = True) -> AsyncProcess:
         """
@@ -1635,7 +1641,9 @@ class Command:
             # Same as pipeline(): clean up every spawned stage _afinish() never
             # got to, running or already exited.
             for stage, run in zip(stages[finished:], spawned[finished:]):
-                await stage._acleanup(run.process, run.opened, stage.__observers)
+                await stage._acleanup(
+                    run.process, run.io_tasks, run.opened, stage.__observers
+                )
 
     @staticmethod
     def _apipeline_stage_io_tasks(

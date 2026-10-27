@@ -609,6 +609,13 @@ class TestCommand:
         with pytest.raises(TypeError, match="queue.Queue"):
             await Command("cat").stdin(q).apipeline(Command("cat"))
 
+    async def test_aexec_timeout_cancels_pending_io_tasks(self) -> None:
+        # The queue never gets its None sentinel, so the feeder would wait forever.
+        q: AsyncQueue[bytes | str | None] = AsyncQueue()
+        with pytest.raises(TimeoutException):
+            await Command("cat").stdin(q).timeout(1).aexec()
+        assert asyncio.all_tasks() == {asyncio.current_task()}
+
     async def test_aexec_with_env(self) -> None:
         lines: list[str] = []
         env = EnvCmd.inherit().add({"ASYNC_VAR": "async_val"}).build()
