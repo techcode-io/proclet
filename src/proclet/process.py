@@ -57,10 +57,10 @@ class CommandNotFound(Exception):
 
 
 class ErrorReturnCode(Exception):
-    """Raised when a command returns a non-zero exit code."""
+    """Raised when a command exits with a code outside its `ok_exit_codes`."""
 
     def __init__(self, cmd: str, exit_code: int) -> None:
-        super().__init__(f"Command '{cmd}' returned non-zero exit code {exit_code}")
+        super().__init__(f"Command '{cmd}' returned exit code {exit_code}")
         self.cmd: str = cmd
         self.exit_code: int = exit_code
 
@@ -1004,7 +1004,7 @@ class Command:
         observers: list[ProcessObserver],
         ok_exit_codes: frozenset[int],
     ) -> None:
-        """Wait for a spawned process, raise on timeout/non-zero exit, then clean up.
+        """Wait for a spawned process, raise on timeout/failed exit, then clean up.
 
         Shared by `exec()` and `pipe()` so both sides of a pipeline get identical
         timeout/error/cleanup semantics.
@@ -1090,7 +1090,7 @@ class Command:
             the downstream command's completed subprocess.Popen.
         Raises:
             CommandNotFound: if either binary can't be found.
-            ErrorReturnCode: if either process exits with a non-zero code.
+            ErrorReturnCode: if either process exits with a code outside its `ok_exit_codes`.
             TimeoutException: if either command's configured timeout elapses.
         """
         return self.pipeline(other)
@@ -1121,7 +1121,7 @@ class Command:
             ValueError: if no downstream commands are given.
             TypeError: if this command's stdin queue doesn't match the run mode.
             CommandNotFound: if any binary can't be found.
-            ErrorReturnCode: if any process exits with a non-zero code.
+            ErrorReturnCode: if any process exits with a code outside its `ok_exit_codes`.
             TimeoutException: if any command's configured timeout elapses.
         """
         if not others:
@@ -1464,7 +1464,7 @@ class Command:
         ok_exit_codes: frozenset[int],
     ) -> None:
         """Async equivalent of `_finish`: wait for a spawned process, raise on
-        timeout/non-zero exit/cancellation, then clean up.
+        timeout/failed exit, then clean up.
 
         Shared by `aexec()` and `apipe()` so both sides of a pipeline get identical
         timeout/error/cleanup semantics. Unlike a plain `except asyncio.CancelledError`,
@@ -1551,7 +1551,7 @@ class Command:
             the downstream command's completed asyncio.subprocess.Process.
         Raises:
             CommandNotFound: if either binary can't be found.
-            ErrorReturnCode: if either process exits with a non-zero code.
+            ErrorReturnCode: if either process exits with a code outside its `ok_exit_codes`.
             TimeoutException: if either command's configured timeout elapses.
         """
         return await self.apipeline(other)
@@ -1579,7 +1579,7 @@ class Command:
             ValueError: if no downstream commands are given.
             TypeError: if this command's stdin queue doesn't match the run mode.
             CommandNotFound: if any binary can't be found.
-            ErrorReturnCode: if any process exits with a non-zero code.
+            ErrorReturnCode: if any process exits with a code outside its `ok_exit_codes`.
             TimeoutException: if any command's configured timeout elapses.
         """
         if not others:
