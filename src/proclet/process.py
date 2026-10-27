@@ -41,15 +41,33 @@ class _AsyncPipelineStage(NamedTuple):
 
 
 class ProcessObserver(Protocol):
-    """Observer notified at process spawn and exit."""
+    """
+    Observer notified at process spawn and exit.
 
-    def on_spawn(self, process: Process) -> None: ...
+    Hooks run synchronously: on the caller's thread or event loop, except
+    `on_exit` after `exec(wait_completion=False)`, which runs on a background
+    thread. They must not raise, as an error there would escape the cleanup.
+    """
 
-    def on_exit(self, process: Process) -> None: ...
+    def on_spawn(self, process: Process) -> None:
+        """Called once the process is spawned, before waiting for it."""
+        ...
+
+    def on_exit(self, process: Process) -> None:
+        """Called once the process has exited (or been terminated) and cleaned up."""
+        ...
 
 
 class CommandNotFound(Exception):
-    """Raised when a command binary is not found."""
+    """
+    Raised when a command binary is not found.
+
+    Raised by `Command(...)` for a name missing from the search path, or at
+    spawn time for a `Path` (or a binary removed since construction).
+
+    Attributes:
+        command: the name or path that couldn't be found.
+    """
 
     def __init__(self, command: str) -> None:
         super().__init__(f"Command not found: {command}")
@@ -57,7 +75,13 @@ class CommandNotFound(Exception):
 
 
 class ErrorReturnCode(Exception):
-    """Raised when a command exits with a code outside its `ok_exit_codes`."""
+    """
+    Raised when a command exits with a code outside its `ok_exit_codes`.
+
+    Attributes:
+        cmd: the command line, binary path followed by its arguments.
+        exit_code: the process' exit code (negative signal number if killed).
+    """
 
     def __init__(self, cmd: str, exit_code: int) -> None:
         super().__init__(f"Command '{cmd}' returned exit code {exit_code}")
@@ -66,7 +90,13 @@ class ErrorReturnCode(Exception):
 
 
 class TimeoutException(Exception):
-    """Raised when a command times out."""
+    """
+    Raised when a command outlives its `timeout()`; the process is terminated.
+
+    Attributes:
+        cmd: the command line, binary path followed by its arguments.
+        timeout: the timeout that elapsed, in seconds.
+    """
 
     def __init__(self, cmd: str, timeout: float) -> None:
         super().__init__(f"Command '{cmd}' timed out after {timeout} seconds")
@@ -84,10 +114,16 @@ type RedirectOut = Path | IO[bytes] | TextIO | Callable[[str], None]
 
 
 def strip_redirect(log_fn: Callable[[str], None]) -> Callable[[str], None]:
-    """Wrap a log callable to strip trailing newlines from process output lines.
+    """
+    Wrap a log callable to strip trailing newlines from process output lines.
 
     Use this when redirecting process stdout/stderr to a logger so each line
     is emitted as a clean record without a trailing newline character.
+
+    Args:
+        log_fn: callable receiving each stripped line, e.g. `logger.info`.
+    Returns:
+        a callable to pass to `Command.stdout()`/`Command.stderr()`.
     """
     return lambda line: log_fn(line.rstrip("\n"))
 
@@ -352,7 +388,13 @@ async def _read_line(stream: asyncio.StreamReader) -> bytes:
 
 
 class Command:
-    """Convenient wrapper around subprocess for process execution."""
+    """
+    Fluent builder and runner for one external command.
+
+    Configure it with the chainable setters (most double as a getter when
+    called without a value), then run it with `exec()`/`aexec()` or chain
+    commands with `pipeline()`/`apipeline()`.
+    """
 
     def __init__(
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
