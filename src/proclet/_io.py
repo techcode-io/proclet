@@ -1,3 +1,5 @@
+"""Private I/O helpers shared by the process module."""
+
 from collections.abc import Sequence
 from contextlib import suppress
 from typing import Protocol
@@ -11,10 +13,10 @@ class Closeable(Protocol):
 
 def close(files: Sequence[Closeable]) -> None:
     """
-    Close a list of file handles, ignoring any errors.
+    Close file handles, ignoring any `OSError`.
 
     Args:
-        files: list of file handles to close.
+        files: file handles to close.
     """
     for file in files:
         with suppress(OSError):
