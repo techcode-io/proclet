@@ -581,28 +581,6 @@ class Command:
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
 
-    @staticmethod
-    def _create_thread_forwarder(stream: IO[bytes], target: RedirectOut) -> Thread:
-        """Create a thread forwarding the lines of a process stream to a redirect target.
-
-        Args:
-            stream: binary readable stream to read from (e.g. process stdout or stderr pipe).
-            target: destination for the lines, see `dispatch_line`.
-        Returns:
-            daemon thread, not yet started.
-        """
-
-        def forward() -> None:
-            try:
-                for line in iter(stream.readline, b""):
-                    dispatch_line(target, line)
-            except (OSError, ValueError):
-                pass
-            finally:
-                stream.close()
-
-        return Thread(target=forward, daemon=True)
-
     def _handle_stdin(self, process: SyncProcess) -> Thread | None:
         """Start a thread feeding stdin from a Queue, str, bytes or fd-less file.
 
@@ -644,19 +622,30 @@ class Command:
     def _handle_stream(
         self, stream: IO[bytes] | None, target: RedirectOut | None
     ) -> Thread | None:
-        """Start a forwarding thread for a single stdout/stderr stream, if it needs one.
+        """Start a thread forwarding a stdout/stderr stream's lines, if it needs one.
 
         Args:
             stream: the process stream to forward from (stdout or stderr).
-            target: the configured redirect target for that stream.
+            target: the configured redirect target for that stream, see
+                `dispatch_line`.
         Returns:
             the started thread, or None if this stream doesn't need forwarding.
         """
-        if needs_forwarding(target) and stream is not None and target is not None:
-            thread = self._create_thread_forwarder(stream, target)
-            thread.start()
-            return thread
-        return None
+        if stream is None or target is None or not needs_forwarding(target):
+            return None
+
+        def forward() -> None:
+            try:
+                for line in iter(stream.readline, b""):
+                    dispatch_line(target, line)
+            except (OSError, ValueError):
+                pass
+            finally:
+                stream.close()
+
+        thread = Thread(target=forward, daemon=True)
+        thread.start()
+        return thread
 
     def _handle_stdout_stderr(self, process: SyncProcess) -> list[Thread]:
         """Start forwarding threads for stdout and stderr.
@@ -1042,30 +1031,6 @@ class Command:
         except FileNotFoundError as err:
             raise CommandNotFound(self.__cmd_path) from err
 
-    @staticmethod
-    def _create_task_forwarder(
-        stream: asyncio.StreamReader,
-        target: RedirectOut,
-    ) -> Task[None]:
-        """Forward an async stream to configured target.
-
-        Args:
-            stream: the stream reader to forward from (stdout or stderr).
-            target: destination for the lines, see `dispatch_line`.
-        """
-
-        async def forward() -> None:
-            try:
-                while True:
-                    line = await read_line(stream)
-                    if not line:
-                        break
-                    dispatch_line(target, line)
-            except (OSError, ValueError):
-                pass
-
-        return create_task(forward())
-
     def _ahandle_stdin(self, process: AsyncProcess) -> Task[None] | None:
         """Start a task feeding stdin from a Queue, str, bytes or fd-less file.
 
@@ -1107,17 +1072,29 @@ class Command:
     def _ahandle_stream(
         self, stream: asyncio.StreamReader | None, target: RedirectOut | None
     ) -> Task[None] | None:
-        """Start a forwarding task for a single stdout/stderr stream, if it needs one.
+        """Start a task forwarding a stdout/stderr stream's lines, if it needs one.
 
         Args:
             stream: the process stream to forward from (stdout or stderr).
-            target: the configured redirect target for that stream.
+            target: the configured redirect target for that stream, see
+                `dispatch_line`.
         Returns:
             the created task, or None if this stream doesn't need forwarding.
         """
-        if needs_forwarding(target) and stream is not None and target is not None:
-            return self._create_task_forwarder(stream, target)
-        return None
+        if stream is None or target is None or not needs_forwarding(target):
+            return None
+
+        async def forward() -> None:
+            try:
+                while True:
+                    line = await read_line(stream)
+                    if not line:
+                        break
+                    dispatch_line(target, line)
+            except (OSError, ValueError):
+                pass
+
+        return create_task(forward())
 
     def _ahandle_stdout_stderr(
         self,
