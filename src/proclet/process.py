@@ -750,35 +750,45 @@ class Command:
         return Thread(target=forward, daemon=True)
 
     def _handle_stdin(self, process: SyncProcess) -> Thread | None:
-        """Handle stdin input from Queue or string.
+        """Start a thread feeding stdin from a Queue or string.
+
+        Feeding happens off the calling thread so a child blocked on a full
+        stdout/stderr pipe can't deadlock the write.
 
         Args:
             process: the subprocess to feed stdin to.
         Returns:
-            thread for async stdin feeding from Queue, or None for string input.
+            the started thread, or None when stdin isn't fed from Python.
         """
+        stdin = process.stdin
+        if stdin is None:
+            return None
         if isinstance(self.__in, queue.Queue):
             sync_queue = self.__in
 
             def forward() -> None:
-                assert process.stdin is not None
                 while True:
                     data = sync_queue.get()
                     if data is None:
                         break
                     encoded: bytes = data if isinstance(data, bytes) else data.encode()
-                    process.stdin.write(encoded)
-                    process.stdin.flush()
-                process.stdin.close()
+                    stdin.write(encoded)
+                    stdin.flush()
+                stdin.close()
 
-            thread = threading.Thread(target=forward, daemon=True)
-            thread.start()
-            return thread
         elif isinstance(self.__in, str):
-            if process.stdin is not None:
-                process.stdin.write(self.__in.encode())
-                process.stdin.close()
-        return None
+            payload = self.__in.encode()
+
+            def forward() -> None:
+                stdin.write(payload)
+                stdin.close()
+
+        else:
+            return None
+
+        thread = threading.Thread(target=forward, daemon=True)
+        thread.start()
+        return thread
 
     def _handle_stream(
         self, stream: IO[bytes] | None, target: RedirectOut | None
@@ -820,15 +830,12 @@ class Command:
         process: SyncProcess,
     ) -> list[Thread]:
         """Start threads for forwarding I/O to callbacks/StringIO."""
-        threads: list[Thread] = []
+        # Start draining stdout/stderr before feeding stdin
+        threads = self._handle_stdout_stderr(process)
 
-        # Handle stdin from Queue or string
         stdin_thread = self._handle_stdin(process)
         if stdin_thread is not None:
             threads.append(stdin_thread)
-
-        # Start forwarding threads for stdout and stderr
-        threads.extend(self._handle_stdout_stderr(process))
         return threads
 
     @staticmethod
@@ -1203,34 +1210,46 @@ class Command:
 
         return create_task(forward())
 
-    async def _async_handle_stdin(self, process: AsyncProcess) -> Task[None] | None:
-        """Handle async stdin input from Queue or string.
+    def _async_handle_stdin(self, process: AsyncProcess) -> Task[None] | None:
+        """Start a task feeding stdin from a Queue or string.
+
+        Feeding happens in its own task so the configured timeout covers it.
 
         Args:
             process: the asyncio subprocess to feed stdin to.
+        Returns:
+            the created task, or None when stdin isn't fed from Python.
         """
-        if isinstance(self.__in, asyncio.Queue) and process.stdin is not None:
+        stdin = process.stdin
+        if stdin is None:
+            return None
+        if isinstance(self.__in, asyncio.Queue):
             async_queue = self.__in
 
             async def forward() -> None:
-                assert process.stdin is not None
                 while True:
                     data = await async_queue.get()
                     if data is None:
                         break
                     encoded: bytes = data if isinstance(data, bytes) else data.encode()
-                    process.stdin.write(encoded)
-                    await process.stdin.drain()
-                process.stdin.close()
-                await process.stdin.wait_closed()
+                    stdin.write(encoded)
+                    await stdin.drain()
+                stdin.close()
+                await stdin.wait_closed()
 
-            return asyncio.create_task(forward())
-        elif isinstance(self.__in, str) and process.stdin is not None:
-            process.stdin.write(self.__in.encode())
-            await process.stdin.drain()
-            process.stdin.close()
-            await process.stdin.wait_closed()
-        return None
+        elif isinstance(self.__in, str):
+            payload = self.__in.encode()
+
+            async def forward() -> None:
+                stdin.write(payload)
+                await stdin.drain()
+                stdin.close()
+                await stdin.wait_closed()
+
+        else:
+            return None
+
+        return asyncio.create_task(forward())
 
     def _async_handle_stream(
         self, stream: asyncio.StreamReader | None, target: RedirectOut | None
@@ -1268,7 +1287,7 @@ class Command:
                 tasks.append(task)
         return tasks
 
-    async def _create_io_tasks(
+    def _create_io_tasks(
         self,
         process: AsyncProcess,
     ) -> list[asyncio.Task[None]]:
@@ -1279,15 +1298,12 @@ class Command:
         Returns:
             list of tasks started for I/O forwarding.
         """
-        tasks: list[asyncio.Task[None]] = []
+        # Start draining stdout/stderr before feeding stdin
+        tasks = self._async_handle_stdout_stderr(process)
 
-        # Handle stdin from Queue or string
-        stdin_task = await self._async_handle_stdin(process)
+        stdin_task = self._async_handle_stdin(process)
         if stdin_task is not None:
             tasks.append(stdin_task)
-
-        # Start forwarding tasks for stdout and stderr
-        tasks.extend(self._async_handle_stdout_stderr(process))
         return tasks
 
     @staticmethod
@@ -1412,7 +1428,7 @@ class Command:
             raise
 
         # Handle I/O concurrently with waiting
-        io_tasks = await self._create_io_tasks(process)
+        io_tasks = self._create_io_tasks(process)
         self._notify_spawn(self.__observers, process)
 
         if wait_completion:
@@ -1518,7 +1534,7 @@ class Command:
                         assert pending_read_fd is not None
                         os.close(pending_read_fd)
 
-                io_tasks = await self._apipeline_stage_io_tasks(
+                io_tasks = self._apipeline_stage_io_tasks(
                     stage, process, is_first=is_first, is_last=is_last
                 )
                 stage._notify_spawn(stage.__observers, process)
@@ -1545,7 +1561,7 @@ class Command:
                     await stage._acleanup(run.process, run.opened, stage.__observers)
 
     @staticmethod
-    async def _apipeline_stage_io_tasks(
+    def _apipeline_stage_io_tasks(
         stage: Command, process: AsyncProcess, *, is_first: bool, is_last: bool
     ) -> list[Task[None]]:
         """Start the I/O forwarding tasks a single `apipeline()` stage needs.
@@ -1562,7 +1578,7 @@ class Command:
         """
         tasks: list[Task[None]] = []
         if is_first:
-            stdin_task = await stage._async_handle_stdin(process)
+            stdin_task = stage._async_handle_stdin(process)
             if stdin_task is not None:
                 tasks.append(stdin_task)
         if is_last:

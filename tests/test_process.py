@@ -362,6 +362,13 @@ class TestCommand:
         cmd.exec()
         assert any("hello from stdin" in line for line in lines)
 
+    def test_exec_large_stdin_string_does_not_deadlock(self) -> None:
+        # Larger than any pipe buffer: stdout must be drained while stdin is fed.
+        payload = "x" * (1 << 20)
+        out = StringIO()
+        Command("cat").stdin(payload).stdout(out).timeout(10).exec()
+        assert out.getvalue() == payload
+
     def test_exec_stdin_from_queue(self) -> None:
         lines: list[str] = []
         q: Queue[bytes | str | None] = Queue()
@@ -470,6 +477,12 @@ class TestCommand:
         cmd.stdout(lines.append)
         await cmd.aexec()
         assert any("async stdin" in line for line in lines)
+
+    async def test_aexec_large_stdin_string_does_not_deadlock(self) -> None:
+        payload = ("x" * 1023 + "\n") * 1024
+        out = StringIO()
+        await Command("cat").stdin(payload).stdout(out).timeout(10).aexec()
+        assert out.getvalue() == payload
 
     async def test_aexec_stdin_from_queue(self) -> None:
         lines: list[str] = []
