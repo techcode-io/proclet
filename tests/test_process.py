@@ -40,6 +40,19 @@ class _RecordingObserver:
         self.exited.append(process)
 
 
+class _FdWriter:
+    """File-like object exposing a real fd without subclassing IOBase."""
+
+    def __init__(self, path: Path) -> None:
+        self._file = path.open("wb")
+
+    def fileno(self) -> int:
+        return self._file.fileno()
+
+    def close(self) -> None:
+        self._file.close()
+
+
 class TestEnvCmd:
     def test_empty(self) -> None:
         env = EnvCmd.empty()
@@ -348,6 +361,12 @@ class TestCommand:
         cmd.exec()
         assert "err_content" in err_file.read_text()
 
+    def test_exec_stdout_to_non_iobase_file_object(self, tmp_path: Path) -> None:
+        writer = _FdWriter(tmp_path / "out")
+        Command("echo").args("duck").stdout(writer).exec()
+        writer.close()
+        assert (tmp_path / "out").read_text() == "duck\n"
+
     def test_exec_stdout_to_bytesio(self) -> None:
         payload = bytes(range(256)) * 512
         out = BytesIO()
@@ -523,6 +542,12 @@ class TestCommand:
         cmd.stdout(out_file)
         await cmd.aexec()
         assert "async file output" in out_file.read_text()
+
+    async def test_aexec_stdout_to_non_iobase_file_object(self, tmp_path: Path) -> None:
+        writer = _FdWriter(tmp_path / "out")
+        await Command("echo").args("duck").stdout(writer).aexec()
+        writer.close()
+        assert (tmp_path / "out").read_text() == "duck\n"
 
     async def test_aexec_stdout_to_bytesio(self) -> None:
         payload = bytes(range(256)) * 512

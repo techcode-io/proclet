@@ -756,18 +756,32 @@ class Command:
 
         Args:
             redirect: the redirect target.
+        Returns:
+            the opened file for a `Path`, otherwise see `_redirect_fd`.
         """
-        if redirect is None:
-            return subprocess.DEVNULL
         if isinstance(redirect, Path):
             return redirect.open("wb")
-        if isinstance(redirect, IOBase):
-            try:
-                return redirect.fileno()
-            except (OSError, AttributeError):
-                pass
-        # File objects without a real fd (e.g. StringIO) and callables need PIPE for forwarding
-        return subprocess.PIPE
+        return Command._redirect_fd(redirect)
+
+    @staticmethod
+    def _redirect_fd(redirect: RedirectOut | None) -> int:
+        """Pick the fd or subprocess constant for a stdout/stderr redirect other than a `Path`.
+
+        Shared by `_prepare_redirect()` and `_prepare_async_redirect()`.
+
+        Args:
+            redirect: the redirect target.
+        Returns:
+            subprocess.PIPE for targets forwarded from Python (callables, file
+            objects without a real fd), the fd of other file objects, or
+            subprocess.DEVNULL when unset or unusable.
+        """
+        if _needs_forwarding(redirect):
+            return subprocess.PIPE
+        try:
+            return redirect.fileno()
+        except (OSError, AttributeError):
+            return subprocess.DEVNULL
 
     def _popen(
         self,
@@ -1201,29 +1215,20 @@ class Command:
                 threads.append(stderr_thread)
         return threads
 
+    @staticmethod
     async def _prepare_async_redirect(
-        self,
         redirect: RedirectOut | None,
     ) -> int | IO[bytes]:
-        """Prepare stdout/stderr redirect for async subprocess.
+        """Async equivalent of `_prepare_redirect`, opening a `Path` off the event loop.
 
         Args:
             redirect: the redirect target.
         Returns:
-            file descriptor or subprocess constant for the redirect.
+            the opened file for a `Path`, otherwise see `_redirect_fd`.
         """
-        if redirect is None:
-            return subprocess.DEVNULL
-        elif isinstance(redirect, Path):
-            return await asyncio.to_thread(open, redirect, "wb")
-        elif isinstance(redirect, IOBase):
-            try:
-                return redirect.fileno()
-            except (OSError, AttributeError):
-                return subprocess.PIPE
-        elif _needs_forwarding(redirect):
-            return subprocess.PIPE
-        return subprocess.DEVNULL
+        if isinstance(redirect, Path):
+            return await asyncio.to_thread(redirect.open, "wb")
+        return Command._redirect_fd(redirect)
 
     async def _apopen(
         self,
