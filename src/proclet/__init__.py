@@ -4,14 +4,16 @@ from proclet.env import EnvCmd, PathCmd
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
 from proclet.process import (
     AsyncProcess,
-    AsyncRedirectIn,
     Bind,
     Command,
     Process,
     ProcessObserver,
+    SyncProcess,
+)
+from proclet.redirect import (
+    AsyncRedirectIn,
     RedirectIn,
     RedirectOut,
-    SyncProcess,
     SyncRedirectIn,
     strip_redirect,
 )

@@ -7,16 +7,17 @@ import shutil
 import subprocess
 import sys
 from asyncio import Task, create_task, gather
-from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import suppress
 from io import IOBase, TextIOBase
 from pathlib import Path
 from threading import Thread
-from typing import IO, NamedTuple, Protocol, Self, TextIO, overload
+from typing import IO, NamedTuple, Protocol, Self, overload
 
 from proclet._io import close
 from proclet._platform import low_priority_hook, priority_creationflags, require_os
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
+from proclet.redirect import RedirectIn, RedirectOut
 
 # Type aliases for process types
 type SyncProcess = subprocess.Popen[bytes]
@@ -55,29 +56,6 @@ class ProcessObserver(Protocol):
     def on_exit(self, process: Process) -> None:
         """Called once the process has exited (or been terminated) and cleaned up."""
         ...
-
-
-# Redirect command types
-type SyncRedirectIn = queue.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
-type AsyncRedirectIn = (
-    asyncio.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
-)
-type RedirectIn = SyncRedirectIn | AsyncRedirectIn
-type RedirectOut = Path | IO[bytes] | TextIO | Callable[[str], None]
-
-
-def strip_redirect(log_fn: Callable[[str], None]) -> Callable[[str], None]:
-    """Wrap a log callable to strip trailing newlines from process output lines.
-
-    Use this when redirecting process stdout/stderr to a logger so each line
-    is emitted as a clean record without a trailing newline character.
-
-    Args:
-        log_fn: callable receiving each stripped line, e.g. `logger.info`.
-    Returns:
-        a callable to pass to `Command.stdout()`/`Command.stderr()`.
-    """
-    return lambda line: log_fn(line.rstrip("\n"))
 
 
 def _needs_forwarding(redirect: RedirectOut | None) -> bool:
