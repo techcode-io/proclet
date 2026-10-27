@@ -921,7 +921,7 @@ class Command:
                         assert upstream.stdout is not None
                         upstream.stdout.close()
 
-                io_threads = self._pipeline_stage_io_threads(
+                io_threads = self._start_stage_io(
                     stage, process, is_first=is_first, is_last=is_last
                 )
                 stage._notify_spawn(stage.__observers, process)
@@ -949,7 +949,7 @@ class Command:
                 stage._cleanup(run.process, run.opened, stage.__observers)
 
     @staticmethod
-    def _pipeline_stage_io_threads(
+    def _start_stage_io(
         stage: Command, process: SyncProcess, *, is_first: bool, is_last: bool
     ) -> list[Thread]:
         """Start the I/O forwarding threads a single `pipeline()` stage needs.
@@ -1381,7 +1381,7 @@ class Command:
                         assert pending_read_fd is not None
                         os.close(pending_read_fd)
 
-                io_tasks = self._apipeline_stage_io_tasks(
+                io_tasks = self._astart_stage_io(
                     stage, process, is_first=is_first, is_last=is_last
                 )
                 stage._notify_spawn(stage.__observers, process)
@@ -1409,12 +1409,12 @@ class Command:
                 )
 
     @staticmethod
-    def _apipeline_stage_io_tasks(
+    def _astart_stage_io(
         stage: Command, process: AsyncProcess, *, is_first: bool, is_last: bool
     ) -> list[Task[None]]:
         """Start the I/O forwarding tasks a single `apipeline()` stage needs.
 
-        Async equivalent of `_pipeline_stage_io_threads` - see its docstring.
+        Async equivalent of `_start_stage_io` - see its docstring.
 
         Args:
             stage: the stage that was just spawned.
