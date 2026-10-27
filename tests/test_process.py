@@ -1630,6 +1630,10 @@ class TestBind:
 
 
 class TestOkExitCodes:
+    def test_requires_at_least_one_code(self) -> None:
+        with pytest.raises(ValueError):
+            Command("true").ok_exit_codes()
+
     def test_exec_default_rejects_non_zero(self) -> None:
         with pytest.raises(ErrorReturnCode):
             Command("sh").args("-c", "exit 1").exec()

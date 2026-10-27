@@ -664,7 +664,16 @@ class Command:
         Any other exit code raises `ErrorReturnCode`. Useful for tools that use
         non-zero codes for warnings, e.g. GNU tar exits 1 when a file changed
         while being read.
+
+        Args:
+            *codes: the successful exit codes; they replace the current set.
+        Returns:
+            self for chaining.
+        Raises:
+            ValueError: if no code is given, which would make every run fail.
         """
+        if not codes:
+            raise ValueError("ok_exit_codes() requires at least one exit code")
         self.__ok_exit_codes = frozenset(codes)
         return self
 
