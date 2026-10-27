@@ -12,8 +12,7 @@ class Closeable(Protocol):
 
 
 def close(files: Sequence[Closeable]) -> None:
-    """
-    Close file handles, ignoring any `OSError`.
+    """Close file handles, ignoring any `OSError`.
 
     Args:
         files: file handles to close.

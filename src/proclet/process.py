@@ -41,8 +41,7 @@ class _AsyncPipelineStage(NamedTuple):
 
 
 class ProcessObserver(Protocol):
-    """
-    Observer notified at process spawn and exit.
+    """Observer notified at process spawn and exit.
 
     Hooks run synchronously: on the caller's thread or event loop, except
     `on_exit` after `exec(wait_completion=False)`, which runs on a background
@@ -59,8 +58,7 @@ class ProcessObserver(Protocol):
 
 
 class CommandNotFound(Exception):
-    """
-    Raised when a command binary is not found.
+    """Raised when a command binary is not found.
 
     Raised by `Command(...)` for a name missing from the search path, or at
     spawn time for a `Path` (or a binary removed since construction).
@@ -75,8 +73,7 @@ class CommandNotFound(Exception):
 
 
 class ErrorReturnCode(Exception):
-    """
-    Raised when a command exits with a code outside its `ok_exit_codes`.
+    """Raised when a command exits with a code outside its `ok_exit_codes`.
 
     Attributes:
         cmd: the command line, binary path followed by its arguments.
@@ -90,8 +87,7 @@ class ErrorReturnCode(Exception):
 
 
 class TimeoutException(Exception):
-    """
-    Raised when a command outlives its `timeout()`; the process is terminated.
+    """Raised when a command outlives its `timeout()`; the process is terminated.
 
     Attributes:
         cmd: the command line, binary path followed by its arguments.
@@ -114,8 +110,7 @@ type RedirectOut = Path | IO[bytes] | TextIO | Callable[[str], None]
 
 
 def strip_redirect(log_fn: Callable[[str], None]) -> Callable[[str], None]:
-    """
-    Wrap a log callable to strip trailing newlines from process output lines.
+    """Wrap a log callable to strip trailing newlines from process output lines.
 
     Use this when redirecting process stdout/stderr to a logger so each line
     is emitted as a clean record without a trailing newline character.
@@ -136,8 +131,7 @@ _IOPRIO_CLASS_SHIFT = 13
 
 
 def _low_priority_hook(nice: int | None) -> Callable[[], None] | None:
-    """
-    Build the `preexec_fn` lowering CPU (and, on Linux, IO) priority of a child.
+    """Build the `preexec_fn` lowering CPU (and, on Linux, IO) priority of a child.
 
     Everything the hook needs is resolved here, before the fork, so the hook
     itself only makes plain syscalls. IO priority is best effort: it is
@@ -174,8 +168,7 @@ def _low_priority_hook(nice: int | None) -> Callable[[], None] | None:
 
 
 def _priority_creationflags(nice: int | None) -> int:
-    """
-    Map a niceness to the Windows priority class of a child.
+    """Map a niceness to the Windows priority class of a child.
 
     Windows has no niceness, only a handful of priority classes, so the value
     is bucketed: >= 15 idle, 1..14 below normal, 0 unchanged, -14..-1 above
@@ -201,8 +194,7 @@ def _priority_creationflags(nice: int | None) -> int:
 
 
 def _require_os(option: str, func: str) -> None:
-    """
-    Fail fast when the platform can't apply a POSIX-only spawn option.
+    """Fail fast when the platform can't apply a POSIX-only spawn option.
 
     Args:
         option: name of the option being set, for the error message.
@@ -228,8 +220,7 @@ class EnvCmd:
 
     @staticmethod
     def inherit(predicate: Callable[[str, str], bool] | None = None) -> EnvCmd:
-        """
-        Create an env command that inherits env vars from the current process.
+        """Create an env command that inherits env vars from the current process.
 
         Args:
             predicate: keeps only the `(key, value)` pairs it returns True for;
@@ -247,8 +238,7 @@ class EnvCmd:
         return env
 
     def add(self, env_vars: dict[str, str]) -> Self:
-        """
-        Add env vars, overriding any already set under the same key.
+        """Add env vars, overriding any already set under the same key.
 
         Args:
             env_vars: env vars to add.
@@ -259,7 +249,8 @@ class EnvCmd:
         return self
 
     def build(self) -> dict[str, str]:
-        """
+        """Build the env vars, for `Command.env()`.
+
         Returns:
             a copy of the env vars built so far.
         """
@@ -280,8 +271,7 @@ class PathCmd:
 
     @staticmethod
     def inherit() -> PathCmd:
-        """
-        Create a path command that inherits `PATH` from the current process.
+        """Create a path command that inherits `PATH` from the current process.
 
         Empty entries are dropped, since a lookup would treat them as the
         current directory.
@@ -296,8 +286,7 @@ class PathCmd:
         return path
 
     def add(self, value: str) -> Self:
-        """
-        Prepend a directory, so it is searched before those already added.
+        """Prepend a directory, so it is searched before those already added.
 
         Args:
             value: directory to prepend.
@@ -308,7 +297,8 @@ class PathCmd:
         return self
 
     def build(self) -> str:
-        """
+        """Build the `PATH` value.
+
         Returns:
             the `PATH` value, entries joined with `os.pathsep`.
         """
@@ -344,8 +334,7 @@ def _encode_input(data: bytes | str) -> bytes:
 
 
 def _dispatch_line(target: RedirectOut, line: bytes) -> None:
-    """
-    Hand one line of process output to a forwarded redirect target.
+    """Hand one line of process output to a forwarded redirect target.
 
     Callables and text streams get the line decoded (invalid bytes replaced);
     binary streams without a real fd (e.g. BytesIO) get the raw bytes.
@@ -363,8 +352,7 @@ def _dispatch_line(target: RedirectOut, line: bytes) -> None:
 
 
 async def _read_line(stream: asyncio.StreamReader) -> bytes:
-    """
-    Read one line of any length, like the sync forwarder's `readline()`.
+    """Read one line of any length, like the sync forwarder's `readline()`.
 
     `StreamReader.readline()` raises once a line outgrows the stream's buffer
     limit (64 KiB by default), which would stop the forwarding for good.
@@ -388,8 +376,7 @@ async def _read_line(stream: asyncio.StreamReader) -> bytes:
 
 
 class Command:
-    """
-    Fluent builder and runner for one external command.
+    """Fluent builder and runner for one external command.
 
     Configure it with the chainable setters (most double as a getter when
     called without a value), then run it with `exec()`/`aexec()` or chain
@@ -399,8 +386,7 @@ class Command:
     def __init__(
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
     ) -> None:
-        """
-        Init command.
+        """Init command.
 
         Args:
             cmd_path: command name or path.
@@ -439,8 +425,7 @@ class Command:
     def args(self, first: str, /, *values: str) -> Self: ...
 
     def args(self, *values: str) -> tuple[str, ...] | Self:
-        """
-        Returns current arguments if no value is provided, otherwise set arguments.
+        """Returns current arguments if no value is provided, otherwise set arguments.
 
         Setting replaces the previous arguments. Calling with no value reads
         them, so arguments can't be cleared back to none this way.
@@ -463,8 +448,7 @@ class Command:
     def env(self, value: dict[str, str]) -> Self: ...
 
     def env(self, value: dict[str, str] | None = None) -> dict[str, str] | Self:
-        """
-        Returns current env vars if no value is provided, otherwise set env vars.
+        """Returns current env vars if no value is provided, otherwise set env vars.
 
         Until env vars are set, the command inherits the parent's environment
         and the getter returns `{}`. Once set, the command gets exactly that
@@ -489,8 +473,7 @@ class Command:
     def cwd(self, value: Path) -> Self: ...
 
     def cwd(self, value: Path | None = None) -> Path | Self:
-        """
-        Returns current cwd if no value is provided, otherwise set cwd.
+        """Returns current cwd if no value is provided, otherwise set cwd.
 
         Args:
             value: cwd to set.
@@ -510,8 +493,7 @@ class Command:
     def user(self, value: str | int) -> Self: ...
 
     def user(self, value: str | int | None = None) -> str | int | None | Self:
-        """
-        Returns current user if no value is provided, otherwise set user.
+        """Returns current user if no value is provided, otherwise set user.
 
         The user is passed straight through to `subprocess.Popen`/
         `asyncio.create_subprocess_exec` (a username or uid), which drop
@@ -539,8 +521,7 @@ class Command:
     def group(self, value: str | int) -> Self: ...
 
     def group(self, value: str | int | None = None) -> str | int | None | Self:
-        """
-        Returns current group if no value is provided, otherwise set group.
+        """Returns current group if no value is provided, otherwise set group.
 
         Passed straight through to `subprocess.Popen`/
         `asyncio.create_subprocess_exec` (a group name or gid), like `user`.
@@ -568,8 +549,7 @@ class Command:
     def extra_groups(
         self, value: Sequence[str | int] | None = None
     ) -> list[str | int] | None | Self:
-        """
-        Returns current supplementary groups if no value is provided, otherwise set them.
+        """Returns current supplementary groups if no value is provided, otherwise set them.
 
         Unset (`None`) keeps the parent's supplementary groups; an empty list
         drops them all, which is what a privilege drop wants. POSIX only.
@@ -595,8 +575,7 @@ class Command:
     def nice(self, value: int) -> Self: ...
 
     def nice(self, value: int | None = None) -> int | None | Self:
-        """
-        Returns current niceness if no value is provided, otherwise set it.
+        """Returns current niceness if no value is provided, otherwise set it.
 
         The child lowers its CPU priority to this niceness before exec (and,
         on Linux, moves to the idle IO class on a best effort basis). Raising
@@ -622,8 +601,7 @@ class Command:
     def stdin(self, value: RedirectIn) -> Self: ...
 
     def stdin(self, value: RedirectIn | None = None) -> RedirectIn | None | Self:
-        """
-        Returns current stdin if no value is provided, otherwise set stdin.
+        """Returns current stdin if no value is provided, otherwise set stdin.
 
         Accepts a `str` (encoded as UTF-8) or `bytes` payload, a file object
         (one with a real fd is handed to the child, others such as `StringIO`
@@ -649,8 +627,7 @@ class Command:
     def stdout(self, value: RedirectOut) -> Self: ...
 
     def stdout(self, value: RedirectOut | None = None) -> RedirectOut | None | Self:
-        """
-        Returns current stdout if no value is provided, otherwise set stdout.
+        """Returns current stdout if no value is provided, otherwise set stdout.
 
         Accepts a `Path` (truncated and written; a relative one is resolved
         against the current directory now, not against `cwd()`), a file object,
@@ -676,8 +653,7 @@ class Command:
     def stderr(self, value: RedirectOut) -> Self: ...
 
     def stderr(self, value: RedirectOut | None = None) -> RedirectOut | None | Self:
-        """
-        Returns current stderr if no value is provided, otherwise set stderr.
+        """Returns current stderr if no value is provided, otherwise set stderr.
 
         Accepts the same targets as `stdout()`.
 
@@ -695,8 +671,7 @@ class Command:
         return self
 
     def inherit(self) -> Self:
-        """
-        Inherit stdin, stdout and stderr from current process.
+        """Inherit stdin, stdout and stderr from current process.
 
         Returns:
             self for chaining.
@@ -706,12 +681,10 @@ class Command:
         return self
 
     def inherit_out(self, if_unset: bool = False) -> Self:
-        """
-        Inherit stdout and stderr from current process.
+        """Inherit stdout and stderr from current process.
 
         Args:
             if_unset: when True, only inherit a stream if it is not already configured.
-
         Returns:
             self for chaining.
         """
@@ -722,8 +695,7 @@ class Command:
         return self
 
     def timeout(self, timeout: float) -> Self:
-        """
-        Set how long a run may take before `TimeoutException` is raised.
+        """Set how long a run may take before `TimeoutException` is raised.
 
         The process is terminated once it elapses. Only enforced when the run
         waits for completion: `exec(wait_completion=False)` and
@@ -739,8 +711,7 @@ class Command:
         return self
 
     def ok_exit_codes(self, *codes: int) -> Self:
-        """
-        Set the exit codes considered successful (default: only 0).
+        """Set the exit codes considered successful (default: only 0).
 
         Any other exit code raises `ErrorReturnCode`. Useful for tools that use
         non-zero codes for warnings, e.g. GNU tar exits 1 when a file changed
@@ -759,9 +730,10 @@ class Command:
         return self
 
     def binary_path(self) -> Path:
-        """
+        """Get the binary this command runs.
+
         Returns:
-            path where binary is installed.
+            the binary's path, as resolved at construction.
         """
         return Path(self.__cmd_path)
 
@@ -771,8 +743,7 @@ class Command:
         return self
 
     def copy(self, cmd: Command) -> Self:
-        """
-        Copy all parameters from another command, keeping this one's binary.
+        """Copy all parameters from another command, keeping this one's binary.
 
         Collections are copied; redirect targets and observers are shared.
 
@@ -816,8 +787,7 @@ class Command:
             obs.on_spawn(process)
 
     def _check_stdin_mode(self, *, asynchronous: bool) -> None:
-        """
-        Reject a stdin queue that the requested execution mode can't consume.
+        """Reject a stdin queue that the requested execution mode can't consume.
 
         Args:
             asynchronous: whether the command is about to run through asyncio.
@@ -831,7 +801,7 @@ class Command:
             raise TypeError("sync runs need a queue.Queue stdin, not an asyncio.Queue")
 
     def _prepare_stdin(self) -> int | None:
-        """Convert the configured stdin redirect into a file descriptor or subprocess constant.
+        """Convert the configured stdin into a file descriptor or subprocess constant.
 
         Returns:
             fileno of a file object backed by a real fd, subprocess.PIPE for input
@@ -864,7 +834,7 @@ class Command:
 
     @staticmethod
     def _redirect_fd(redirect: RedirectOut | None) -> int:
-        """Pick the fd or subprocess constant for a stdout/stderr redirect other than a `Path`.
+        """Pick the fd or subprocess constant for a non-`Path` stdout/stderr redirect.
 
         Shared by `_prepare_redirect()` and `_aprepare_redirect()`.
 
@@ -920,7 +890,7 @@ class Command:
 
     @staticmethod
     def _create_thread_forwarder(stream: IO[bytes], target: RedirectOut) -> Thread:
-        """Create a thread that reads binary lines from stream, decodes them, and dispatches to target.
+        """Create a thread forwarding the lines of a process stream to a redirect target.
 
         Args:
             stream: binary readable stream to read from (e.g. process stdout or stderr pipe).
@@ -1128,8 +1098,7 @@ class Command:
             Command._cleanup(process, opened_files, observers)
 
     def exec(self, wait_completion: bool = True) -> SyncProcess:
-        """
-        Run the command.
+        """Run the command.
 
         By default this waits for the process and enforces `timeout()` and
         `ok_exit_codes()`. With `wait_completion=False` it returns as soon as
@@ -1182,8 +1151,7 @@ class Command:
             return process
 
     def pipe(self, other: Command) -> SyncProcess:
-        """
-        Run this command and pipe its stdout directly into `other`'s stdin, then run
+        """Run this command and pipe its stdout directly into `other`'s stdin, then run
         `other` and wait for both processes to complete.
 
         Shorthand for `pipeline(other)` - see its docstring for the full contract
@@ -1202,8 +1170,7 @@ class Command:
         return self.pipeline(other)
 
     def pipeline(self, *others: Command) -> SyncProcess:
-        """
-        Run this command and each of `others` concurrently, piping every stage's
+        """Run this command and each of `others` concurrently, piping every stage's
         stdout directly into the next stage's stdin, then wait for all processes to
         complete.
 
@@ -1605,8 +1572,7 @@ class Command:
             await Command._acleanup(process, io_tasks, opened_files, observers)
 
     async def aexec(self, wait_completion: bool = True) -> AsyncProcess:
-        """
-        Run the command with asyncio, the async equivalent of `exec()`.
+        """Run the command with asyncio, the async equivalent of `exec()`.
 
         With `wait_completion=False` the cleanup runs in a background task
         instead of a thread; see `exec()`.
@@ -1657,8 +1623,7 @@ class Command:
             return process
 
     async def apipe(self, other: Command) -> AsyncProcess:
-        """
-        Run this command and pipe its stdout directly into `other`'s stdin using
+        """Run this command and pipe its stdout directly into `other`'s stdin using
         asyncio subprocesses, then run `other` and wait for both processes to complete.
 
         Shorthand for `apipeline(other)` - see its docstring for the full contract.
@@ -1675,8 +1640,7 @@ class Command:
         return await self.apipeline(other)
 
     async def apipeline(self, *others: Command) -> AsyncProcess:
-        """
-        Run this command and each of `others` concurrently using asyncio
+        """Run this command and each of `others` concurrently using asyncio
         subprocesses, piping every stage's stdout directly into the next stage's
         stdin, then wait for all processes to complete.
 
@@ -1805,8 +1769,7 @@ class Command:
 
 
 class Bind:
-    """
-    Base class for typed wrappers around one binary.
+    """Base class for typed wrappers around one binary.
 
     Subclasses call `super().__init__("<binary>")` and drive `self._cmd`, the
     underlying `Command`; the methods below forward to it. A subclass that
@@ -1817,8 +1780,7 @@ class Bind:
     def __init__(
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
     ) -> None:
-        """
-        Init bind.
+        """Init bind.
 
         Args:
             cmd_path: command name or path, see `Command`.
@@ -1831,8 +1793,7 @@ class Bind:
     def create(
         self, cmd_path: str | Path, search_path: Sequence[str] | None = None
     ) -> Command:
-        """
-        Create the underlying command; override to customise it.
+        """Create the underlying command; override to customise it.
 
         Args:
             cmd_path: command name or path.
@@ -1856,8 +1817,7 @@ class Bind:
     def env(self, value: dict[str, str]) -> Self: ...
 
     def env(self, value: dict[str, str] | None = None) -> dict[str, str] | Self:
-        """
-        Returns current env vars if no value is provided, otherwise set env vars.
+        """Returns current env vars if no value is provided, otherwise set env vars.
 
         See `Command.env()`: unset inherits the parent's environment.
 
@@ -1878,8 +1838,7 @@ class Bind:
     def cwd(self, value: Path) -> Self: ...
 
     def cwd(self, value: Path | None = None) -> Path | Self:
-        """
-        Returns current cwd if no value is provided, otherwise set cwd.
+        """Returns current cwd if no value is provided, otherwise set cwd.
 
         Args:
             value: cwd to set.
@@ -1898,8 +1857,7 @@ class Bind:
     def user(self, value: str | int) -> Self: ...
 
     def user(self, value: str | int | None = None) -> str | int | None | Self:
-        """
-        Returns current user if no value is provided, otherwise set user.
+        """Returns current user if no value is provided, otherwise set user.
 
         See `Command.user()`: needs the privileges to switch user.
 
@@ -1922,8 +1880,7 @@ class Bind:
     def group(self, value: str | int) -> Self: ...
 
     def group(self, value: str | int | None = None) -> str | int | None | Self:
-        """
-        Returns current group if no value is provided, otherwise set group.
+        """Returns current group if no value is provided, otherwise set group.
 
         See `Command.group()`.
 
@@ -1948,8 +1905,7 @@ class Bind:
     def extra_groups(
         self, value: Sequence[str | int] | None = None
     ) -> list[str | int] | None | Self:
-        """
-        Returns current supplementary groups if no value is provided, otherwise set them.
+        """Returns current supplementary groups if no value is provided, otherwise set them.
 
         See `Command.extra_groups()`: unset keeps the parent's groups.
 
@@ -1972,8 +1928,7 @@ class Bind:
     def nice(self, value: int) -> Self: ...
 
     def nice(self, value: int | None = None) -> int | None | Self:
-        """
-        Returns current niceness if no value is provided, otherwise set it.
+        """Returns current niceness if no value is provided, otherwise set it.
 
         See `Command.nice()` for the per-platform behaviour.
 
@@ -1988,8 +1943,7 @@ class Bind:
         return self
 
     def stdin(self, value: RedirectIn) -> Self:
-        """
-        Set stdin redirect, see `Command.stdin()` for the accepted values.
+        """Set stdin redirect, see `Command.stdin()` for the accepted values.
 
         Args:
             value: stdin to set.
@@ -2000,8 +1954,7 @@ class Bind:
         return self
 
     def stdout(self, value: RedirectOut) -> Self:
-        """
-        Set stdout redirect, see `Command.stdout()` for the accepted values.
+        """Set stdout redirect, see `Command.stdout()` for the accepted values.
 
         Args:
             value: stdout to set.
@@ -2012,8 +1965,7 @@ class Bind:
         return self
 
     def stderr(self, value: RedirectOut) -> Self:
-        """
-        Set stderr redirect, see `Command.stdout()` for the accepted values.
+        """Set stderr redirect, see `Command.stdout()` for the accepted values.
 
         Args:
             value: stderr to set.
@@ -2024,8 +1976,7 @@ class Bind:
         return self
 
     def inherit(self) -> Self:
-        """
-        Inherit stdin, stdout and stderr from current process.
+        """Inherit stdin, stdout and stderr from current process.
 
         Returns:
             self for chaining.
@@ -2034,12 +1985,10 @@ class Bind:
         return self
 
     def inherit_out(self, if_unset: bool = False) -> Self:
-        """
-        Inherit stdout and stderr from current process.
+        """Inherit stdout and stderr from current process.
 
         Args:
             if_unset: when True, only inherit a stream if it is not already configured.
-
         Returns:
             self for chaining.
         """
@@ -2047,8 +1996,7 @@ class Bind:
         return self
 
     def timeout(self, timeout: float) -> Self:
-        """
-        Set how long a run may take, see `Command.timeout()`.
+        """Set how long a run may take, see `Command.timeout()`.
 
         Args:
             timeout: maximum run time, in seconds.
@@ -2059,8 +2007,7 @@ class Bind:
         return self
 
     def ok_exit_codes(self, *codes: int) -> Self:
-        """
-        Set the exit codes considered successful, see `Command.ok_exit_codes()`.
+        """Set the exit codes considered successful, see `Command.ok_exit_codes()`.
 
         Args:
             *codes: the successful exit codes; they replace the current set.
@@ -2073,15 +2020,15 @@ class Bind:
         return self
 
     def binary_path(self) -> Path:
-        """
+        """Get the binary this command runs.
+
         Returns:
-            path where binary is installed.
+            the binary's path, as resolved at construction.
         """
         return self._cmd.binary_path()
 
     def copy(self, cmd: Command) -> Self:
-        """
-        Copy all parameters from another command, see `Command.copy()`.
+        """Copy all parameters from another command, see `Command.copy()`.
 
         Args:
             cmd: the command to copy parameters from.
@@ -2092,8 +2039,7 @@ class Bind:
         return self
 
     def pipe(self, other: Bind | Command) -> SyncProcess:
-        """
-        Run this bind's command and pipe its stdout directly into `other`'s stdin.
+        """Run this bind's command and pipe its stdout directly into `other`'s stdin.
 
         Shorthand for `pipeline(other)` - see `Command.pipeline()` for the full
         contract (raw OS pipe, error/timeout semantics, what gets ignored/overwritten
@@ -2109,8 +2055,7 @@ class Bind:
         return self.pipeline(other)
 
     def pipeline(self, *others: Bind | Command) -> SyncProcess:
-        """
-        Run this bind's command and each of `others` concurrently, piping every
+        """Run this bind's command and each of `others` concurrently, piping every
         stage's stdout directly into the next stage's stdin.
 
         See `Command.pipeline()` for the full contract (raw OS pipe, error/timeout
@@ -2128,8 +2073,7 @@ class Bind:
         )
 
     async def apipe(self, other: Bind | Command) -> AsyncProcess:
-        """
-        Run this bind's command and pipe its stdout directly into `other`'s stdin
+        """Run this bind's command and pipe its stdout directly into `other`'s stdin
         using asyncio subprocesses.
 
         Shorthand for `apipeline(other)` - see `Command.apipeline()` for the full
@@ -2145,8 +2089,7 @@ class Bind:
         return await self.apipeline(other)
 
     async def apipeline(self, *others: Bind | Command) -> AsyncProcess:
-        """
-        Run this bind's command and each of `others` concurrently using asyncio
+        """Run this bind's command and each of `others` concurrently using asyncio
         subprocesses, piping every stage's stdout directly into the next stage's
         stdin.
 
