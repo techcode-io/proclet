@@ -1,10 +1,10 @@
 """Fluent, typed subprocess wrapper with sync and async execution and pipelines."""
 
+from proclet.bind import Bind
 from proclet.env import EnvCmd, PathCmd
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
 from proclet.process import (
     AsyncProcess,
-    Bind,
     Command,
     Process,
     ProcessObserver,
