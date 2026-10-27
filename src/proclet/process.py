@@ -1006,8 +1006,8 @@ class Command:
     ) -> None:
         """Wait for a spawned process, raise on timeout/failed exit, then clean up.
 
-        Shared by `exec()` and `pipe()` so both sides of a pipeline get identical
-        timeout/error/cleanup semantics.
+        Shared by `exec()` and `pipeline()` so a lone command and every stage of
+        a pipeline get identical timeout/error/cleanup semantics.
 
         Args:
             process: the subprocess to wait for.
@@ -1108,7 +1108,7 @@ class Command:
 
     def pipeline(self, *others: Command) -> SyncProcess:
         """
-        Run this command and each of `others` in sequence, piping every stage's
+        Run this command and each of `others` concurrently, piping every stage's
         stdout directly into the next stage's stdin, then wait for all processes to
         complete.
 
@@ -1120,7 +1120,12 @@ class Command:
         into the next stage, except the last stage's, which is honored normally.
         Every stage's own configured stdin is ignored and always becomes the upstream
         pipe, except the first stage's (self), which is honored normally. Every
-        stage's stderr, env, cwd, timeout and observers are honored normally.
+        stage's stderr, env, cwd, timeout, exit codes and observers are honored
+        normally.
+
+        Stages are waited on in order, so a stage's timeout counts from when the
+        previous stage finished. The first failure is raised and every stage
+        still running is then terminated.
 
         See `apipeline()` for the asyncio equivalent.
 
@@ -1168,7 +1173,7 @@ class Command:
                         # Allow the previous stage to receive SIGPIPE if this stage
                         # exits early: once this stage has its own copy of the pipe
                         # (or failed to spawn), the parent's copy must go so it isn't
-                        # left as the pipe's last reader - same as pipe().
+                        # left as the pipe's last reader.
                         assert upstream.stdout is not None
                         upstream.stdout.close()
 
@@ -1477,10 +1482,9 @@ class Command:
         """Async equivalent of `_finish`: wait for a spawned process, raise on
         timeout/failed exit, then clean up.
 
-        Shared by `aexec()` and `apipe()` so both sides of a pipeline get identical
-        timeout/error/cleanup semantics. Unlike a plain `except asyncio.CancelledError`,
-        routing cleanup through the `finally` here means a still-running process also
-        gets terminated on a raised `TimeoutException`, not just on cancellation.
+        Shared by `aexec()` and `apipeline()`. Cleanup runs on every exit path,
+        so a still-running process is terminated on a timeout, an error or a
+        cancellation of the awaiting task alike.
 
         Args:
             process: the asyncio subprocess to wait for.
@@ -1577,9 +1581,9 @@ class Command:
 
     async def apipeline(self, *others: Command) -> AsyncProcess:
         """
-        Run this command and each of `others` in sequence using asyncio subprocesses,
-        piping every stage's stdout directly into the next stage's stdin, then wait
-        for all processes to complete.
+        Run this command and each of `others` concurrently using asyncio
+        subprocesses, piping every stage's stdout directly into the next stage's
+        stdin, then wait for all processes to complete.
 
         Async equivalent of `pipeline()` - see its docstring for the full contract
         (what gets ignored/overwritten on each stage, error/timeout semantics).
@@ -1638,10 +1642,10 @@ class Command:
                             os.close(next_read_fd)
                         raise
                 finally:
-                    # Same reasoning as apipe(): the parent's copy of each fd handed
-                    # to a child must go once that child has its own (or failed to
-                    # spawn), or the writer would never see SIGPIPE / the parent
-                    # would be left holding the pipe open.
+                    # Same reasoning as in pipeline(): the parent's copy of each fd
+                    # handed to a child must go once that child has its own (or
+                    # failed to spawn), or the writer would never see SIGPIPE / the
+                    # parent would be left holding the pipe open.
                     if write_fd is not None:
                         os.close(write_fd)
                     if not is_first:
@@ -1957,9 +1961,9 @@ class Bind:
         """
         Run this bind's command and pipe its stdout directly into `other`'s stdin.
 
-        Shorthand for `pipeline(other)` - see `Command.pipe()` for the full contract
-        (raw OS pipe, error/timeout semantics, what gets ignored/overwritten on each
-        side).
+        Shorthand for `pipeline(other)` - see `Command.pipeline()` for the full
+        contract (raw OS pipe, error/timeout semantics, what gets ignored/overwritten
+        on each side).
 
         Args:
             other: the downstream bind or command to receive this command's stdout.
@@ -1970,7 +1974,7 @@ class Bind:
 
     def pipeline(self, *others: Bind | Command) -> SyncProcess:
         """
-        Run this bind's command and each of `others` in sequence, piping every
+        Run this bind's command and each of `others` concurrently, piping every
         stage's stdout directly into the next stage's stdin.
 
         See `Command.pipeline()` for the full contract (raw OS pipe, error/timeout
@@ -1990,7 +1994,7 @@ class Bind:
         Run this bind's command and pipe its stdout directly into `other`'s stdin
         using asyncio subprocesses.
 
-        Shorthand for `apipeline(other)` - see `Command.apipe()` for the full
+        Shorthand for `apipeline(other)` - see `Command.apipeline()` for the full
         contract.
 
         Args:
@@ -2002,7 +2006,7 @@ class Bind:
 
     async def apipeline(self, *others: Bind | Command) -> AsyncProcess:
         """
-        Run this bind's command and each of `others` in sequence using asyncio
+        Run this bind's command and each of `others` concurrently using asyncio
         subprocesses, piping every stage's stdout directly into the next stage's
         stdin.
 
