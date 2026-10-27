@@ -61,16 +61,8 @@ class ErrorReturnCode(Exception):
 
     def __init__(self, cmd: str, exit_code: int) -> None:
         super().__init__(f"Command '{cmd}' returned non-zero exit code {exit_code}")
-        self.__cmd = cmd
-        self.__exit_code = exit_code
-
-    @property
-    def cmd(self) -> str:
-        return self.__cmd
-
-    @property
-    def exit_code(self) -> int:
-        return self.__exit_code
+        self.cmd: str = cmd
+        self.exit_code: int = exit_code
 
 
 class TimeoutException(Exception):
@@ -78,16 +70,8 @@ class TimeoutException(Exception):
 
     def __init__(self, cmd: str, timeout: float) -> None:
         super().__init__(f"Command '{cmd}' timed out after {timeout} seconds")
-        self.__cmd = cmd
-        self.__timeout = timeout
-
-    @property
-    def cmd(self) -> str:
-        return self.__cmd
-
-    @property
-    def timeout(self) -> float:
-        return self.__timeout
+        self.cmd: str = cmd
+        self.timeout: float = timeout
 
 
 # Redirect command types
