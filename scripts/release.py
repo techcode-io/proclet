@@ -12,19 +12,9 @@ def _git(*args: str) -> None:
 
 
 def _set_version(version: str) -> None:
-    # Update project version
-    try:
-        data = PROJECT_PATH.read_text()
-    except Exception as err:
-        print("The `pyproject.toml` can't be read", file=sys.stderr)
-        raise err
-
+    data = PROJECT_PATH.read_text()
     data = re.sub(r"version = \"(.+)\"", f'version = "{version}"', data, count=1)
-    try:
-        PROJECT_PATH.write_text(data)
-    except Exception as err:
-        print("The `pyproject.toml` file can't be written", file=sys.stderr)
-        raise err
+    PROJECT_PATH.write_text(data)
 
 
 def run() -> None:
@@ -32,13 +22,9 @@ def run() -> None:
     release_version = os.getenv("RELEASE_VERSION")
     next_version = os.getenv("NEXT_VERSION")
     if not release_version:
-        return print(
-            "You must define `RELEASE_VERSION` environment variable", file=sys.stderr
-        )
+        sys.exit("You must define `RELEASE_VERSION` environment variable")
     if not next_version:
-        return print(
-            "You must define `NEXT_VERSION` environment variable", file=sys.stderr
-        )
+        sys.exit("You must define `NEXT_VERSION` environment variable")
 
     # Switch to main branch
     _git("checkout", "main")
