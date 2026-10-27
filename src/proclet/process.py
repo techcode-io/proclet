@@ -92,8 +92,10 @@ class TimeoutException(Exception):
 
 
 # Redirect command types
-type SyncRedirectIn = queue.Queue[bytes | str | None] | str | IO[bytes] | TextIO
-type AsyncRedirectIn = asyncio.Queue[bytes | str | None] | str | IO[bytes] | TextIO
+type SyncRedirectIn = queue.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
+type AsyncRedirectIn = (
+    asyncio.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
+)
 type RedirectIn = SyncRedirectIn | AsyncRedirectIn
 type RedirectOut = Path | IO[bytes] | TextIO | Callable[[str], None]
 
@@ -282,7 +284,7 @@ def _needs_forwarding(redirect: RedirectOut | None) -> bool:
 
 
 def _encode_input(data: bytes | str) -> bytes:
-    """Encode a stdin queue item, passing bytes through untouched."""
+    """Encode stdin input, passing bytes through untouched."""
     return data if isinstance(data, bytes) else data.encode()
 
 
@@ -692,12 +694,12 @@ class Command:
         """Convert the configured stdin redirect into a file descriptor or subprocess constant.
 
         Returns:
-            fileno of a TextIO redirect, subprocess.PIPE for Queue or str input,
+            fileno of a TextIO redirect, subprocess.PIPE for Queue, str or bytes input,
             or subprocess.DEVNULL when no stdin is configured.
         """
         if self.__in is None:
             return subprocess.DEVNULL
-        if isinstance(self.__in, (queue.Queue, asyncio.Queue, str)):
+        if isinstance(self.__in, (queue.Queue, asyncio.Queue, str, bytes)):
             return subprocess.PIPE
         try:
             return self.__in.fileno()
@@ -802,12 +804,12 @@ class Command:
         """
         stdin = process.stdin
         source = self.__in
-        if stdin is None or not isinstance(source, (queue.Queue, str)):
+        if stdin is None or not isinstance(source, (queue.Queue, str, bytes)):
             return None
 
         def chunks() -> Iterator[bytes]:
-            if isinstance(source, str):
-                yield source.encode()
+            if isinstance(source, (str, bytes)):
+                yield _encode_input(source)
                 return
             while (data := source.get()) is not None:
                 yield _encode_input(data)
@@ -1256,12 +1258,12 @@ class Command:
         """
         stdin = process.stdin
         source = self.__in
-        if stdin is None or not isinstance(source, (asyncio.Queue, str)):
+        if stdin is None or not isinstance(source, (asyncio.Queue, str, bytes)):
             return None
 
         async def chunks() -> AsyncIterator[bytes]:
-            if isinstance(source, str):
-                yield source.encode()
+            if isinstance(source, (str, bytes)):
+                yield _encode_input(source)
                 return
             while (data := await source.get()) is not None:
                 yield _encode_input(data)

@@ -390,6 +390,12 @@ class TestCommand:
         Command("cat").stdin(payload).stdout(out).timeout(10).exec()
         assert out.getvalue() == payload
 
+    def test_exec_stdin_from_bytes(self) -> None:
+        payload = bytes(range(256))
+        out = StringIO()
+        Command("od").args("-An", "-tx1", "-v").stdin(payload).stdout(out).exec()
+        assert out.getvalue().split() == [f"{byte:02x}" for byte in payload]
+
     def test_exec_stdin_from_queue(self) -> None:
         lines: list[str] = []
         q: Queue[bytes | str | None] = Queue()
@@ -535,6 +541,12 @@ class TestCommand:
         out = StringIO()
         await Command("cat").stdin(payload).stdout(out).timeout(10).aexec()
         assert out.getvalue() == payload
+
+    async def test_aexec_stdin_from_bytes(self) -> None:
+        payload = bytes(range(256))
+        out = StringIO()
+        await Command("od").args("-An", "-tx1", "-v").stdin(payload).stdout(out).aexec()
+        assert out.getvalue().split() == [f"{byte:02x}" for byte in payload]
 
     async def test_aexec_stdin_from_queue(self) -> None:
         lines: list[str] = []
