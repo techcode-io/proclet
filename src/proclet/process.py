@@ -665,7 +665,7 @@ class Command:
                 threads.append(thread)
         return threads
 
-    def _create_io_threads(
+    def _start_io(
         self,
         process: SyncProcess,
     ) -> list[Thread]:
@@ -812,7 +812,7 @@ class Command:
             raise
 
         # Start background threads to forward piped stdout/stderr to their targets
-        io_threads = self._create_io_threads(process)
+        io_threads = self._start_io(process)
         self._notify_spawn(self.__observers, process)
 
         if wait_completion:
@@ -1117,7 +1117,7 @@ class Command:
                 tasks.append(task)
         return tasks
 
-    def _create_io_tasks(
+    def _astart_io(
         self,
         process: AsyncProcess,
     ) -> list[Task[None]]:
@@ -1274,7 +1274,7 @@ class Command:
             raise
 
         # Handle I/O concurrently with waiting
-        io_tasks = self._create_io_tasks(process)
+        io_tasks = self._astart_io(process)
         self._notify_spawn(self.__observers, process)
 
         if wait_completion:
