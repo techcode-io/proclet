@@ -788,7 +788,7 @@ class Command:
     def _redirect_fd(redirect: RedirectOut | None) -> int:
         """Pick the fd or subprocess constant for a stdout/stderr redirect other than a `Path`.
 
-        Shared by `_prepare_redirect()` and `_prepare_async_redirect()`.
+        Shared by `_prepare_redirect()` and `_aprepare_redirect()`.
 
         Args:
             redirect: the redirect target.
@@ -1237,7 +1237,7 @@ class Command:
         return threads
 
     @staticmethod
-    async def _prepare_async_redirect(
+    async def _aprepare_redirect(
         redirect: RedirectOut | None,
     ) -> int | IO[bytes]:
         """Async equivalent of `_prepare_redirect`, opening a `Path` off the event loop.
@@ -1310,7 +1310,7 @@ class Command:
 
         return create_task(forward())
 
-    def _async_handle_stdin(self, process: AsyncProcess) -> Task[None] | None:
+    def _ahandle_stdin(self, process: AsyncProcess) -> Task[None] | None:
         """Start a task feeding stdin from a Queue, str, bytes or fd-less file.
 
         Feeding happens in its own task so the configured timeout covers it.
@@ -1348,7 +1348,7 @@ class Command:
 
         return asyncio.create_task(forward())
 
-    def _async_handle_stream(
+    def _ahandle_stream(
         self, stream: asyncio.StreamReader | None, target: RedirectOut | None
     ) -> Task[None] | None:
         """Start a forwarding task for a single stdout/stderr stream, if it needs one.
@@ -1363,7 +1363,7 @@ class Command:
             return self._create_task_forwarder(stream, target)
         return None
 
-    def _async_handle_stdout_stderr(
+    def _ahandle_stdout_stderr(
         self,
         process: AsyncProcess,
     ) -> list[Task[None]]:
@@ -1379,7 +1379,7 @@ class Command:
             (process.stdout, self.__out),
             (process.stderr, self.__err),
         ):
-            task = self._async_handle_stream(proc_stream, target)
+            task = self._ahandle_stream(proc_stream, target)
             if task is not None:
                 tasks.append(task)
         return tasks
@@ -1396,9 +1396,9 @@ class Command:
             list of tasks started for I/O forwarding.
         """
         # Start draining stdout/stderr before feeding stdin
-        tasks = self._async_handle_stdout_stderr(process)
+        tasks = self._ahandle_stdout_stderr(process)
 
-        stdin_task = self._async_handle_stdin(process)
+        stdin_task = self._ahandle_stdin(process)
         if stdin_task is not None:
             tasks.append(stdin_task)
         return tasks
@@ -1523,8 +1523,8 @@ class Command:
 
         # Prepare subprocess args for async
         stdout, stderr = await gather(
-            self._prepare_async_redirect(self.__out),
-            self._prepare_async_redirect(self.__err),
+            self._aprepare_redirect(self.__out),
+            self._aprepare_redirect(self.__err),
         )
         opened_files = self._opened(stdout, stderr)
 
@@ -1612,12 +1612,12 @@ class Command:
                 is_first = index == 0
                 is_last = index == last_index
 
-                stderr = await stage._prepare_async_redirect(stage.__err)
+                stderr = await stage._aprepare_redirect(stage.__err)
 
                 next_read_fd: int | None = None
                 write_fd: int | None = None
                 if is_last:
-                    stdout = await stage._prepare_async_redirect(stage.__out)
+                    stdout = await stage._aprepare_redirect(stage.__out)
                 else:
                     next_read_fd, write_fd = os.pipe()
                     stdout = write_fd
@@ -1689,13 +1689,13 @@ class Command:
         """
         tasks: list[Task[None]] = []
         if is_first:
-            stdin_task = stage._async_handle_stdin(process)
+            stdin_task = stage._ahandle_stdin(process)
             if stdin_task is not None:
                 tasks.append(stdin_task)
         if is_last:
-            tasks.extend(stage._async_handle_stdout_stderr(process))
+            tasks.extend(stage._ahandle_stdout_stderr(process))
         else:
-            stderr_task = stage._async_handle_stream(process.stderr, stage.__err)
+            stderr_task = stage._ahandle_stream(process.stderr, stage.__err)
             if stderr_task is not None:
                 tasks.append(stderr_task)
         return tasks
