@@ -1034,12 +1034,23 @@ class Command:
 
     def exec(self, wait_completion: bool = True) -> SyncProcess:
         """
-        Run the command and return the subprocess.Popen directly.
+        Run the command.
+
+        By default this waits for the process and enforces `timeout()` and
+        `ok_exit_codes()`. With `wait_completion=False` it returns as soon as
+        the process is spawned: neither is enforced, and redirect files are
+        closed and observers' `on_exit` called from a background thread once
+        the process exits.
 
         Args:
-            wait_completion: wait for completion.
+            wait_completion: wait for the process to exit before returning.
         Returns:
-            subprocess.Popen process.
+            the subprocess.Popen process, finished when waited for.
+        Raises:
+            CommandNotFound: if the binary can't be found.
+            ErrorReturnCode: if the process exits with a code outside `ok_exit_codes`.
+            TimeoutException: if the configured timeout elapses.
+            TypeError: if stdin is an `asyncio.Queue`.
         """
         self._check_stdin_mode(asynchronous=False)
         full_cmd = self._full_cmd()
@@ -1496,12 +1507,20 @@ class Command:
 
     async def aexec(self, wait_completion: bool = True) -> AsyncProcess:
         """
-        Run the command asynchronously and return asyncio.subprocess.Process directly.
+        Run the command with asyncio, the async equivalent of `exec()`.
+
+        With `wait_completion=False` the cleanup runs in a background task
+        instead of a thread; see `exec()`.
 
         Args:
-            wait_completion: wait for completion.
+            wait_completion: wait for the process to exit before returning.
         Returns:
-            asyncio.subprocess.Process.
+            the asyncio.subprocess.Process, finished when waited for.
+        Raises:
+            CommandNotFound: if the binary can't be found.
+            ErrorReturnCode: if the process exits with a code outside `ok_exit_codes`.
+            TimeoutException: if the configured timeout elapses.
+            TypeError: if stdin is a `queue.Queue`.
         """
         self._check_stdin_mode(asynchronous=True)
         full_cmd = self._full_cmd()
