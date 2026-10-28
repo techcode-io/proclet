@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import subprocess
@@ -5,7 +6,9 @@ import sys
 from pathlib import Path
 from typing import Final
 
-PROJECT_PATH: Final[Path] = Path(__file__).resolve().parent.parent / "pyproject.toml"
+ROOT_PATH: Final[Path] = Path(__file__).resolve().parent.parent
+CHANGELOG_PATH: Final[Path] = ROOT_PATH / "CHANGELOG.md"
+REPOSITORY_URL: Final[str] = "https://github.com/techcode-io/proclet"
 
 
 def _git(*args: str) -> None:
@@ -13,9 +16,39 @@ def _git(*args: str) -> None:
 
 
 def _set_version(version: str) -> None:
-    data = PROJECT_PATH.read_text()
-    data = re.sub(r"version = \"(.+)\"", f'version = "{version}"', data, count=1)
-    PROJECT_PATH.write_text(data)
+    # Updates pyproject.toml and uv.lock together, so `uv sync --locked` passes.
+    subprocess.run(["uv", "version", version], check=True, cwd=ROOT_PATH)
+
+
+def _stamp_changelog(version: str) -> None:
+    data = CHANGELOG_PATH.read_text()
+    unreleased = re.search(
+        r"^## \[Unreleased\]\n(.*?)(?=^## \[|^\[)", data, re.MULTILINE | re.DOTALL
+    )
+    if unreleased is None or not unreleased.group(1).strip():
+        sys.exit("CHANGELOG.md has no entry under `## [Unreleased]`")
+    previous = re.search(r"^## \[(\d+\.\d+\.\d+)\]", data, re.MULTILINE)
+    today = datetime.date.today().isoformat()
+
+    # Move the unreleased entries under the new version, keep an empty section.
+    data = data.replace(
+        "## [Unreleased]\n", f"## [Unreleased]\n\n## [{version}] - {today}\n", 1
+    )
+    # Point the links at the new tag.
+    version_url = (
+        f"{REPOSITORY_URL}/compare/{previous.group(1)}...{version}"
+        if previous
+        else f"{REPOSITORY_URL}/releases/tag/{version}"
+    )
+    data = re.sub(
+        r"^\[Unreleased\]: .*$",
+        f"[Unreleased]: {REPOSITORY_URL}/compare/{version}...HEAD\n"
+        f"[{version}]: {version_url}",
+        data,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    CHANGELOG_PATH.write_text(data)
 
 
 def run() -> None:
@@ -31,6 +64,7 @@ def run() -> None:
     _git("checkout", "main")
 
     # Update all files
+    _stamp_changelog(release_version)
     _set_version(release_version)
 
     # Push changes

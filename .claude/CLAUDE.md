@@ -43,19 +43,21 @@ No runtime dependencies - keep it that way.
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
 - Cut a release from a clean `main` with:
   `RELEASE_VERSION=X.Y.Z NEXT_VERSION=X.Y.Z-dev uv run poe release`
-  (`scripts/release.py`, plain `subprocess` + `git`, both env vars required, versions picked
-  by the caller). `pyproject.toml`'s `version` is `X.Y.Z-dev` between releases;
-  `RELEASE_VERSION` is that with `-dev` stripped, `NEXT_VERSION` the next patch + `-dev`.
-- The script sets the version, `git add -A`, signed-off `--no-verify` commit
-  `release: proclet <version>`, tags `<version>`, sets `NEXT_VERSION`, commits
-  `chore: prepare for next iteration`, then pushes `main` and the tag to `origin` - no
-  dry-run or confirmation step.
+  (`scripts/release.py`, plain `subprocess` + `git` + `uv`, both env vars required, versions
+  picked by the caller). `pyproject.toml`'s `version` is `X.Y.Z.dev0` between releases
+  (`uv version` normalizes `-dev`); `RELEASE_VERSION` is that without the dev suffix,
+  `NEXT_VERSION` the next patch + `-dev`.
+- The script refuses an empty `## [Unreleased]` changelog section, then moves its entries
+  under `## [X.Y.Z] - <today>` and updates the compare links, sets the version with
+  `uv version` (keeps `uv.lock` in sync, which `uv sync --locked` needs), `git add -A`,
+  signed-off `--no-verify` commit `release: proclet <version>`, tags `<version>`, sets
+  `NEXT_VERSION`, commits `chore: prepare for next iteration`, then pushes `main` and the
+  tag to `origin` - no dry-run or confirmation step.
 - The tag push runs `.github/workflows/release.yml`: fails if the tag != `uv version --short`,
   runs CI, builds, then publishes via PyPI trusted publishing (OIDC, GitHub environment
   `pypi`, no API token).
-- `CHANGELOG.md` (Keep a Changelog) is maintained by hand: add user-facing changes under
-  `## [Unreleased]`, and rename it to `## [X.Y.Z] - YYYY-MM-DD` (plus its compare link)
-  before cutting a release - `scripts/release.py` doesn't touch it.
+- `CHANGELOG.md` (Keep a Changelog): add user-facing changes under `## [Unreleased]` as
+  they land; the release script stamps the version and date.
 
 ## Design
 - Framework-agnostic: no logging setup, no CLI framework imports, no exits. Errors are
