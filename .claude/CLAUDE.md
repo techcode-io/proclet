@@ -52,7 +52,10 @@ No runtime dependencies - keep it that way.
   dry-run or confirmation step.
 - The tag push runs `.github/workflows/release.yml`: fails if the tag != `uv version --short`,
   runs CI, builds, then publishes via PyPI trusted publishing (OIDC, GitHub environment
-  `pypi`, no API token). No CHANGELOG is generated.
+  `pypi`, no API token).
+- `CHANGELOG.md` (Keep a Changelog) is maintained by hand: add user-facing changes under
+  `## [Unreleased]`, and rename it to `## [X.Y.Z] - YYYY-MM-DD` (plus its compare link)
+  before cutting a release - `scripts/release.py` doesn't touch it.
 
 ## Design
 - Framework-agnostic: no logging setup, no CLI framework imports, no exits. Errors are
