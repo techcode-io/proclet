@@ -13,7 +13,9 @@ class Bind:
     """Base class for typed wrappers around one binary.
 
     A bind holds the context shared by every operation on its binary: env,
-    cwd, user, groups, niceness and observers. Subclasses expose operations
+    cwd, user, groups, niceness and observers. Subclasses call
+    `super().__init__("<binary>")`, may set default context with the setters
+    below, and expose operations
     built with `_command()`, which returns a fresh `Command` each time: an
     operation either returns that command for the caller to configure and
     run, or runs it and returns a processed result. Per-operation settings
@@ -32,26 +34,7 @@ class Bind:
         Raises:
             CommandNotFound: if the command binary can't be found.
         """
-        self._template: Command = self.create(cmd_path, search_path)
-
-    def create(
-        self, cmd_path: str | Path, search_path: Sequence[str] | None = None
-    ) -> Command:
-        """Create the template every operation is copied from; override to customise it.
-
-        Called once, at construction, so the binary is resolved once. Whatever
-        the returned command carries (env, exit codes, redirects...) becomes
-        the default of every operation.
-
-        Args:
-            cmd_path: command name or path.
-            search_path: directories to look the binary up in instead of `PATH`.
-        Returns:
-            the template command.
-        Raises:
-            CommandNotFound: if the command binary can't be found.
-        """
-        return Command(cmd_path, search_path)
+        self._template: Command = Command(cmd_path, search_path)
 
     def _command(self, *args: str) -> Command:
         """Create a fresh command for one operation, carrying the bind's context.

@@ -409,20 +409,24 @@ git.log("main", "--", "README.md").pipe(Command("wc").args("-l").inherit_out())
 - A `Bind` holds the context shared by every operation on its binary: `env`, `cwd`, `user`, `group`, `extra_groups`, `nice` and observers.
 - Each operation calls `self._command(...)`, which returns a fresh `Command` carrying that context, then either returns it, for the caller to redirect, run or pipe (`log`), or runs it and returns a result (`current_branch`).
 - Settings made on one operation's command never leak into another one.
-- Override `create(...)` to give every operation a default, e.g. an env var or accepted exit codes:
+- Set default context in the constructor, and share per-operation defaults through a private helper:
 
 ```python
-from collections.abc import Sequence
-from pathlib import Path
 from proclet import Bind, Command, EnvCmd
 
 
 class Terraform(Bind):
-    def create(
-        self, cmd_path: str | Path, search_path: Sequence[str] | None = None
-    ) -> Command:
-        env = EnvCmd.inherit().add({"TF_IN_AUTOMATION": "1"}).build()
-        return super().create(cmd_path, search_path).env(env)
+    def __init__(self) -> None:
+        super().__init__("terraform")
+        self.env(EnvCmd.inherit().add({"TF_IN_AUTOMATION": "1"}).build())
+
+    def _run(self, *args: str) -> Command:
+        return self._command(*args).timeout(600)
+
+    def plan(self) -> bool:
+        """Whether changes are pending."""
+        plan = self._run("plan", "-detailed-exitcode").ok_exit_codes(0, 2).exec()
+        return plan.returncode == 2
 ```
 
 - A caller's `env(...)` replaces the bind's env: merge onto `bind.env()` to keep its defaults.

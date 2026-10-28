@@ -63,11 +63,12 @@ No runtime dependencies - keep it that way.
   `TimeoutException`); callers decide whether they're fatal.
 - `Bind` is a base for typed per-binary wrappers. It only holds the context shared by every
   operation (`env`, `cwd`, `user`/`group`/`extra_groups`, `nice`, observers) in a template
-  built once by the `create()` factory. Subclasses call `super().__init__("<binary>")` and
-  build each operation with `self._command(*args)`, a fresh `Command` copied from the
+  built once by the constructor. Subclasses call `super().__init__("<binary>")`, set default
+  context with the public setters, and build each operation with `self._command(*args)`, a fresh `Command` copied from the
   template, then either return it (caller configures/runs/pipes it) or run it and return a
   processed result. Per-operation settings (args, redirects, timeout, exit codes, running)
-  never go on `Bind`, so nothing leaks between operations - don't add them back.
+  never go on `Bind`, so nothing leaks between operations - don't add them back, nor an
+  overridable factory that could preset them; share them through a private helper.
 - `user`/`group`/`extra_groups` pass straight to `subprocess.Popen`/
   `asyncio.create_subprocess_exec`. `extra_groups`: `None` keeps the parent's groups, `[]`
   drops them; never default it to `[]` - `setgroups` fails for non-root. They are POSIX

@@ -6,7 +6,6 @@ import subprocess
 import sys
 import threading
 from asyncio import Queue as AsyncQueue
-from collections.abc import Sequence
 from io import BytesIO, StringIO
 from pathlib import Path
 from queue import Queue
@@ -1414,16 +1413,12 @@ class _Py(Bind):
         return out.getvalue().strip()
 
 
-class _Lenient(_Py):
-    """Bind whose template accepts exit code 1 in every operation."""
+class _Configured(_Py):
+    """Bind setting a default env in its constructor."""
 
-    def create(
-        self, cmd_path: str | Path, search_path: Sequence[str] | None = None
-    ) -> Command:
-        return super().create(cmd_path, search_path).ok_exit_codes(0, 1)
-
-    def fail(self) -> Command:
-        return self._command(*false().args())
+    def __init__(self) -> None:
+        super().__init__()
+        self.env({**MINIMAL_ENV, "SENTINEL": "default"})
 
 
 class TestBind:
@@ -1469,11 +1464,6 @@ class TestBind:
         assert returned is b
         assert b.user() == os.getuid()
 
-    def test_create_returns_command(self) -> None:
-        b = self._make_bind()
-        cmd = b.create(PYTHON)
-        assert isinstance(cmd, Command)
-
     def test_command_runs_the_binary(self) -> None:
         b = _Py()
         assert b.echo("hi").binary_path() == b.binary_path()
@@ -1511,12 +1501,12 @@ class TestBind:
         assert b.getenv("SENTINEL") == "set"
         assert b.getenv("SENTINEL") == "set"
 
-    def test_create_sets_operation_defaults(self) -> None:
-        b = _Lenient()
-        b.fail().exec()
-        with pytest.raises(ErrorReturnCode):
-            b.fail().ok_exit_codes(0).exec()
-        b.fail().exec()
+    def test_constructor_sets_context_defaults(self) -> None:
+        b = _Configured()
+        assert b.getenv("SENTINEL") == "default"
+        b.env({**b.env(), "EXTRA": "added"})
+        assert b.getenv("SENTINEL") == "default"
+        assert b.getenv("EXTRA") == "added"
 
     def test_observer_sees_every_operation(self) -> None:
         observer = _RecordingObserver()
