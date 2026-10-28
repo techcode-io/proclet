@@ -1658,7 +1658,10 @@ class TestNice:
         await cmd.stdout(buf).aexec()
         assert buf.getvalue().strip() == str(base + 5)
 
-    def test_no_creationflags_off_windows(self) -> None:
+    def test_no_creationflags_off_windows(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "platform", "linux")
         assert priority_creationflags(19) == 0
         assert priority_creationflags(None) == 0
 
