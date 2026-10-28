@@ -58,9 +58,13 @@ No runtime dependencies - keep it that way.
 - Framework-agnostic: no logging setup, no CLI framework imports, no exits. Errors are
   exceptions (`CommandNotFound` at construction or spawn, `ErrorReturnCode`,
   `TimeoutException`); callers decide whether they're fatal.
-- `Bind` is a thin base for typed per-binary wrappers: subclasses call
-  `super().__init__("<binary>")` and drive `self._cmd`. Subclasses that need extra env vars
-  should merge them onto `self.env()`, not replace it, so a caller's env survives.
+- `Bind` is a base for typed per-binary wrappers. It only holds the context shared by every
+  operation (`env`, `cwd`, `user`/`group`/`extra_groups`, `nice`, observers) in a template
+  built once by the `create()` factory. Subclasses call `super().__init__("<binary>")` and
+  build each operation with `self._command(*args)`, a fresh `Command` copied from the
+  template, then either return it (caller configures/runs/pipes it) or run it and return a
+  processed result. Per-operation settings (args, redirects, timeout, exit codes, running)
+  never go on `Bind`, so nothing leaks between operations - don't add them back.
 - `user`/`group`/`extra_groups` pass straight to `subprocess.Popen`/
   `asyncio.create_subprocess_exec`. `extra_groups`: `None` keeps the parent's groups, `[]`
   drops them; never default it to `[]` - `setgroups` fails for non-root. They are POSIX

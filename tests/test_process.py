@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 from asyncio import Queue as AsyncQueue
+from collections.abc import Sequence
 from io import BytesIO, StringIO
 from pathlib import Path
 from queue import Queue
@@ -1390,20 +1391,39 @@ class TestCommandApipeline:
             assert len(observer.exited) == 1
 
 
-class _Echo(Bind):
-    """Bind printing the given words, written like a real per-binary wrapper."""
-
-    def __init__(self, *words: str) -> None:
-        super().__init__(PYTHON)
-        self._cmd.copy(echo(*words))
-
-
-class _Cat(Bind):
-    """Bind copying stdin to stdout."""
+class _Py(Bind):
+    """Bind around the interpreter, written like a real per-binary wrapper."""
 
     def __init__(self) -> None:
         super().__init__(PYTHON)
-        self._cmd.copy(cat())
+
+    def echo(self, *words: str) -> Command:
+        """Pre-defined operation: print `words`."""
+        return self._command(*echo(*words).args())
+
+    def cat(self) -> Command:
+        """Pre-defined operation: copy stdin to stdout."""
+        return self._command(*cat().args())
+
+    def getenv(self, key: str) -> str:
+        """Result operation: the value of `key` in the child's environment."""
+        out = StringIO()
+        self._command(
+            *py("print(os.environ.get(sys.argv[1], ''))", args=(key,)).args()
+        ).stdout(out).exec()
+        return out.getvalue().strip()
+
+
+class _Lenient(_Py):
+    """Bind whose template accepts exit code 1 in every operation."""
+
+    def create(
+        self, cmd_path: str | Path, search_path: Sequence[str] | None = None
+    ) -> Command:
+        return super().create(cmd_path, search_path).ok_exit_codes(0, 1)
+
+    def fail(self) -> Command:
+        return self._command(*false().args())
 
 
 class TestBind:
@@ -1449,105 +1469,74 @@ class TestBind:
         assert returned is b
         assert b.user() == os.getuid()
 
-    def test_stdin_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.stdin("data")
-        assert returned is b
-
-    def test_stdout_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.stdout(lambda _: None)
-        assert returned is b
-
-    def test_stderr_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.stderr(lambda _: None)
-        assert returned is b
-
-    def test_inherit_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.inherit()
-        assert returned is b
-
-    def test_inherit_out_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.inherit_out()
-        assert returned is b
-
-    def test_timeout_chaining(self) -> None:
-        b = self._make_bind()
-        returned = b.timeout(30)
-        assert returned is b
-
-    def test_copy_chaining(self) -> None:
-        src_cmd = Command(PYTHON)
-        src_cmd.args("hi").env({"X": "1"})
-        b = self._make_bind()
-        returned = b.copy(src_cmd)
-        assert returned is b
-
     def test_create_returns_command(self) -> None:
         b = self._make_bind()
         cmd = b.create(PYTHON)
         assert isinstance(cmd, Command)
 
-    def test_pipe_into_command(self) -> None:
-        buf = StringIO()
-        b = _Echo("via-bind")
-        b.pipe(cat().stdout(buf))
-        assert "via-bind" in buf.getvalue()
+    def test_command_runs_the_binary(self) -> None:
+        b = _Py()
+        assert b.echo("hi").binary_path() == b.binary_path()
+        assert b.echo("hi").args() == echo("hi").args()
 
-    def test_pipe_into_bind(self) -> None:
-        buf = StringIO()
-        upstream = _Echo("piped")
-        downstream = _Cat()
-        downstream._cmd.stdout(buf)
-        upstream.pipe(downstream)
-        assert "piped" in buf.getvalue()
+    def test_command_is_fresh_per_operation(self) -> None:
+        b = _Py()
+        assert b.echo("a") is not b.echo("a")
 
-    async def test_apipe_into_command(self) -> None:
-        buf = StringIO()
-        b = _Echo("via-bind-async")
-        await b.apipe(cat().stdout(buf))
-        assert "via-bind-async" in buf.getvalue()
+    def test_operation_settings_do_not_leak(self) -> None:
+        b = _Py()
+        first = b.echo("a").env({"K": "V"}).stdout(StringIO())
+        second = b.echo("b")
+        assert second.env() == {}
+        assert second.stdout() is None
+        assert first.args() == echo("a").args()
+        assert b.env() == {}
 
-    async def test_apipe_into_bind(self) -> None:
-        buf = StringIO()
-        upstream = _Echo("piped-async")
-        downstream = _Cat()
-        downstream._cmd.stdout(buf)
-        await upstream.apipe(downstream)
-        assert "piped-async" in buf.getvalue()
+    def test_operation_carries_context(self, tmp_path: Path) -> None:
+        b = _Py().env({**MINIMAL_ENV, "SENTINEL": "set"}).cwd(tmp_path).nice(3)
+        op = b.echo("hi")
+        assert op.env() == {**MINIMAL_ENV, "SENTINEL": "set"}
+        assert op.cwd() == tmp_path
+        assert op.nice() == 3
 
-    def test_pipeline_into_command(self) -> None:
-        buf = StringIO()
-        b = _Echo("via-bind-pipeline")
-        b.pipeline(cat(), cat().stdout(buf))
-        assert "via-bind-pipeline" in buf.getvalue()
+    def test_context_change_spares_built_operation(self) -> None:
+        b = _Py()
+        op = b.echo("hi")
+        b.env({"K": "V"})
+        assert op.env() == {}
+        assert b.echo("hi").env() == {"K": "V"}
 
-    def test_pipeline_into_bind(self) -> None:
-        buf = StringIO()
-        upstream = _Echo("piped-pipeline")
-        middle = _Cat()
-        downstream = _Cat()
-        downstream._cmd.stdout(buf)
-        upstream.pipeline(middle, downstream)
-        assert "piped-pipeline" in buf.getvalue()
+    def test_result_operation(self) -> None:
+        b = _Py().env({**MINIMAL_ENV, "SENTINEL": "set"})
+        assert b.getenv("SENTINEL") == "set"
+        assert b.getenv("SENTINEL") == "set"
 
-    async def test_apipeline_into_command(self) -> None:
-        buf = StringIO()
-        b = _Echo("via-bind-apipeline")
-        await b.apipeline(cat(), cat().stdout(buf))
-        assert "via-bind-apipeline" in buf.getvalue()
+    def test_create_sets_operation_defaults(self) -> None:
+        b = _Lenient()
+        b.fail().exec()
+        with pytest.raises(ErrorReturnCode):
+            b.fail().ok_exit_codes(0).exec()
+        b.fail().exec()
 
-    async def test_apipeline_into_bind(self) -> None:
+    def test_observer_sees_every_operation(self) -> None:
+        observer = _RecordingObserver()
+        b = _Py().add_observer(observer)
+        b.echo("a").exec()
+        b.echo("b").exec()
+        assert len(observer.spawned) == 2
+        assert len(observer.exited) == 2
+
+    def test_operations_in_pipeline(self) -> None:
         buf = StringIO()
-        upstream = _Echo("piped-apipeline")
-        middle = _Cat()
-        downstream = _Cat()
-        downstream._cmd.stdout(buf)
-        await upstream.apipeline(middle, downstream)
-        assert "piped-apipeline" in buf.getvalue()
+        b = _Py()
+        b.echo("piped").pipeline(b.cat(), b.cat().stdout(buf))
+        assert buf.getvalue() == "piped\n"
+
+    async def test_operations_in_apipeline(self) -> None:
+        buf = StringIO()
+        b = _Py()
+        await b.echo("piped-async").apipeline(b.cat(), b.cat().stdout(buf))
+        assert buf.getvalue() == "piped-async\n"
 
 
 class TestOkExitCodes:

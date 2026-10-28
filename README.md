@@ -196,11 +196,10 @@ class Git(Bind):
         super().__init__("git")
 
     def clone(self, url: str, dest: str) -> None:
-        self._cmd.args("clone", "--", url, dest).exec()
+        self._command("clone", "--", url, dest).exec()
 ```
 
-- Subclass `Bind` and drive the underlying `Command` through `self._cmd`.
-- Merge extra env vars onto `self.env()` rather than replacing it, so a caller's environment survives.
+- Subclass `Bind` and build each operation with `self._command(...)`, a fresh `Command` carrying the bind's context (env, cwd, user, groups, niceness, observers).
 
 ### How to observe processes
 
