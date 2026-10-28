@@ -12,6 +12,11 @@ class CommandNotFound(Exception):
     """
 
     def __init__(self, command: str) -> None:
+        """Init exception.
+
+        Args:
+            command: the name or path that couldn't be found.
+        """
         super().__init__(f"Command not found: {command}")
         self.command: str = command
 
@@ -25,6 +30,12 @@ class ErrorReturnCode(Exception):
     """
 
     def __init__(self, cmd: str, exit_code: int) -> None:
+        """Init exception.
+
+        Args:
+            cmd: the command line, binary path followed by its arguments.
+            exit_code: the process' exit code.
+        """
         super().__init__(f"Command '{cmd}' returned exit code {exit_code}")
         self.cmd: str = cmd
         self.exit_code: int = exit_code
@@ -39,6 +50,12 @@ class TimeoutException(Exception):
     """
 
     def __init__(self, cmd: str, timeout: float) -> None:
+        """Init exception.
+
+        Args:
+            cmd: the command line, binary path followed by its arguments.
+            timeout: the timeout that elapsed, in seconds.
+        """
         super().__init__(f"Command '{cmd}' timed out after {timeout} seconds")
         self.cmd: str = cmd
         self.timeout: float = timeout

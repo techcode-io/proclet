@@ -8,7 +8,9 @@ from typing import Protocol
 class Closeable(Protocol):
     """Protocol for objects that support closing."""
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+        """Close the object."""
+        ...
 
 
 def close(files: Sequence[Closeable]) -> None:

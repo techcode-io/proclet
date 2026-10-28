@@ -1,3 +1,5 @@
+"""Command builder and runner, process types and the process observer protocol."""
+
 from __future__ import annotations
 
 import asyncio
