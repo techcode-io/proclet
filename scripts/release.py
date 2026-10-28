@@ -1,10 +1,11 @@
 import datetime
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 from typing import Final
+
+from proclet import Command
 
 ROOT_PATH: Final[Path] = Path(__file__).resolve().parent.parent
 CHANGELOG_PATH: Final[Path] = ROOT_PATH / "CHANGELOG.md"
@@ -12,12 +13,12 @@ REPOSITORY_URL: Final[str] = "https://github.com/techcode-io/proclet"
 
 
 def _git(*args: str) -> None:
-    subprocess.run(["git", *args], check=True)
+    Command("git").args(*args).cwd(ROOT_PATH).inherit().exec()
 
 
 def _set_version(version: str) -> None:
     # Updates pyproject.toml and uv.lock together, so `uv sync --locked` passes.
-    subprocess.run(["uv", "version", version], check=True, cwd=ROOT_PATH)
+    Command("uv").args("version", version).cwd(ROOT_PATH).inherit().exec()
 
 
 def _stamp_changelog(version: str) -> None:

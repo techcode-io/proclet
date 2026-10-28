@@ -43,7 +43,7 @@ No runtime dependencies - keep it that way.
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
 - Cut a release from a clean `main` with:
   `RELEASE_VERSION=X.Y.Z NEXT_VERSION=X.Y.Z-dev uv run poe release`
-  (`scripts/release.py`, plain `subprocess` + `git` + `uv`, both env vars required, versions
+  (`scripts/release.py`, runs `git` and `uv` through `proclet` itself, both env vars required, versions
   picked by the caller). `pyproject.toml`'s `version` is `X.Y.Z.dev0` between releases
   (`uv version` normalizes `-dev`); `RELEASE_VERSION` is that without the dev suffix,
   `NEXT_VERSION` the next patch + `-dev`.
