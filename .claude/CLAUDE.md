@@ -18,6 +18,15 @@ No runtime dependencies - keep it that way.
   warnings that CI ignores.
 - `ruff format` also formats Python code blocks inside `README.md`.
 
+## Tests
+- Tests must run on POSIX and Windows: spawn `tests/portable.py` helpers (`py(...)`, `cat()`,
+  `echo()`, `sleep()`...), never POSIX tools (`sh`, `cat`, `head`...).
+- Mark POSIX-only behaviour (`user`/`group`/niceness) with `posix_only` / `skipif(win32)`.
+- Unit tests of platform branches (`_platform.*`) monkeypatch `sys.platform` either way
+  (`"win32"` or `"linux"`), never rely on the host OS.
+- Env tests: a child Python with an empty env still sees `LC_CTYPE`/`__CF_USER_TEXT_ENCODING`
+  on macOS, so assert on a sentinel var and spawn with `MINIMAL_ENV` (Windows needs `SYSTEMROOT`).
+
 ## Environment
 - `uv run ...` fails with "Operation not permitted" under the default Claude sandbox (it
   needs `~/.cache/uv`) - rerun with the sandbox disabled.
@@ -28,7 +37,7 @@ No runtime dependencies - keep it that way.
 - This is a public repo: describe the library on its own terms.
 
 ## CI and release
-- `.github/workflows/ci.yml`: push to `main` + PRs, matrix ubuntu/macos x Python 3.12/3.13,
+- `.github/workflows/ci.yml`: push to `main` + PRs, matrix ubuntu/macos/windows x Python 3.12/3.13,
   `uv sync --locked`, `uv run poe ci`, `uv build`. Keep `uv.lock` committed and in sync.
 - Actions are pinned by commit SHA with the version in a trailing comment
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
