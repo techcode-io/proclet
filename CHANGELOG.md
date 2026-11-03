@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-03
+
 First public release.
 
 ### Added
@@ -33,4 +35,5 @@ First public release.
 - Support for Python 3.12 and 3.13 on Linux, macOS and Windows, with no runtime
   dependency.
 
-[Unreleased]: https://github.com/techcode-io/proclet/commits/main
+[Unreleased]: https://github.com/techcode-io/proclet/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/techcode-io/proclet/releases/tag/0.1.0
