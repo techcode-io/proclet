@@ -41,21 +41,23 @@ No runtime dependencies - keep it that way.
   `uv sync --locked`, `uv run poe ci`, `uv build`. Keep `uv.lock` committed and in sync.
 - Actions are pinned by commit SHA with the version in a trailing comment
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
-- Cut a release from a clean `main` with:
-  `RELEASE_VERSION=X.Y.Z NEXT_VERSION=X.Y.Z-dev uv run poe release`
-  (`scripts/release.py`, runs `git` and `uv` through `proclet` itself, both env vars required, versions
-  picked by the caller). `pyproject.toml`'s `version` is `X.Y.Z.dev0` between releases
-  (`uv version` normalizes `-dev`); `RELEASE_VERSION` is that without the dev suffix,
-  `NEXT_VERSION` the next patch + `-dev`.
-- The script refuses an empty `## [Unreleased]` changelog section, then moves its entries
-  under `## [X.Y.Z] - <today>` and updates the compare links, sets the version with
-  `uv version` (keeps `uv.lock` in sync, which `uv sync --locked` needs), `git add -A`,
-  signed-off `--no-verify` commit `release: proclet <version>`, tags `<version>`, sets
-  `NEXT_VERSION`, commits `chore: prepare for next iteration`, then pushes `main` and the
-  tag to `origin` - no dry-run or confirmation step.
-- The tag push runs `.github/workflows/release.yml`: fails if the tag != `uv version --short`,
-  runs CI, builds, then publishes via PyPI trusted publishing (OIDC, GitHub environment
-  `pypi`, no API token).
+- Releases are cut by manually dispatching two workflows on `main`, each running a
+  `poe` task of `scripts/release.py` (runs `git`, `uv` and `gh` through `proclet` itself):
+  1. `pre-release.yml` (input: `X.Y.Z`) runs `release:pre`: refuses an empty
+     `## [Unreleased]` changelog section, moves its entries under `## [X.Y.Z] - <today>`,
+     updates the compare links, sets the version with `uv version` (keeps `uv.lock` in
+     sync, which `uv sync --locked` needs) and opens a PR from `feat/pre-release-vX.Y.Z`.
+     Merge it before going on.
+  2. `release.yml` (input: next version, `X.Y.Z-dev`) runs CI (`ci.yml` through
+     `workflow_call`, its ubuntu/3.12 job uploads the `dist` artifact), `release` tags the
+     project version and pushes the tag (refuses a dev version), publishes `dist` via PyPI
+     trusted publishing (OIDC, GitHub environment `pypi`, no API token; the job must stay
+     in `release.yml`, the publisher is bound to that file), then `release:post` opens a PR
+     from `feat/post-release-vX.Y.Z-dev` setting the next version. Merge it too.
+- `pyproject.toml`'s `version` is `X.Y.Z.dev0` between releases (`uv version` normalizes
+  `-dev`).
+- PRs opened with the workflow `GITHUB_TOKEN` don't trigger `ci.yml`; `release.yml` runs
+  CI itself before publishing.
 - `CHANGELOG.md` (Keep a Changelog): add user-facing changes under `## [Unreleased]` as
   they land; the release script stamps the version and date.
 
