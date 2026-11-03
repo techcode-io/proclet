@@ -1,13 +1,15 @@
-"""Release proclet: stamp the changelog, tag the release version and push it.
+"""Release proclet, one task per step of the release workflows.
 
-Run with `RELEASE_VERSION=X.Y.Z NEXT_VERSION=X.Y.Z-dev uv run poe release`; the tag
-push triggers the workflow publishing to PyPI.
+`pre` opens a pull request stamping the changelog and setting the release version,
+`run` tags the version on `main`, and `post` opens a pull request setting the next
+iteration version. Publishing to PyPI is left to the `release` workflow.
 """
 
 import datetime
 import os
 import re
 import sys
+from io import StringIO
 from pathlib import Path
 from typing import Final
 
@@ -27,6 +29,51 @@ def _git(*args: str) -> None:
         ErrorReturnCode: if git fails.
     """
     Command("git").args(*args).cwd(ROOT_PATH).inherit().exec()
+
+
+def _create_pull_request(branch: str) -> None:
+    """Open a pull request from `branch` against `main`, filled from its commits.
+
+    Args:
+        branch: the branch to open the pull request from.
+    Raises:
+        ErrorReturnCode: if gh fails.
+    """
+    Command("gh").args("pr", "create", "--fill", "--base=main", f"--head={branch}").cwd(
+        ROOT_PATH
+    ).inherit().exec()
+
+
+def _project_version() -> str:
+    """Read the project version.
+
+    Returns:
+        The version, as normalized by uv.
+    Raises:
+        ErrorReturnCode: if uv fails.
+    """
+    out = StringIO()
+    Command("uv").args("version", "--short").cwd(ROOT_PATH).stdout(out).exec()
+    return out.getvalue().strip()
+
+
+def _version_from_env(name: str, pattern: str) -> str:
+    """Read a version from the environment.
+
+    Args:
+        name: the environment variable holding the version.
+        pattern: the regex the whole version must match.
+    Returns:
+        The version.
+    Raises:
+        SystemExit: if the variable is missing or doesn't match `pattern`.
+    """
+    version = os.getenv(name)
+    if not version:
+        sys.exit(f"You must define `{name}` environment variable")
+    if not re.fullmatch(pattern, version):
+        sys.exit(f"`{name}` must match `{pattern}`, got `{version}`")
+    return version
 
 
 def _set_version(version: str) -> None:
@@ -84,26 +131,18 @@ def _stamp_changelog(version: str) -> None:
     CHANGELOG_PATH.write_text(data)
 
 
-def run() -> None:
-    """Cut a release from `main` and push it, using the versions from the environment.
-
-    Commits and tags `RELEASE_VERSION`, then commits `NEXT_VERSION` and pushes
-    `main` and the tag to `origin`.
+def pre() -> None:
+    """Open a pull request preparing the release of `RELEASE_VERSION`.
 
     Raises:
-        SystemExit: if an env var is missing or the changelog has no entry.
-        ErrorReturnCode: if git or uv fails.
+        SystemExit: if the env var is invalid or the changelog has no entry.
+        ErrorReturnCode: if git, uv or gh fails.
     """
-    # Ensure we have inputs
-    release_version = os.getenv("RELEASE_VERSION")
-    next_version = os.getenv("NEXT_VERSION")
-    if not release_version:
-        sys.exit("You must define `RELEASE_VERSION` environment variable")
-    if not next_version:
-        sys.exit("You must define `NEXT_VERSION` environment variable")
+    release_version = _version_from_env("RELEASE_VERSION", r"\d+\.\d+\.\d+")
 
-    # Switch to main branch
-    _git("checkout", "main")
+    # Create a new branch
+    branch = f"feat/pre-release-v{release_version}"
+    _git("checkout", "-b", branch)
 
     # Update all files
     _stamp_changelog(release_version)
@@ -112,11 +151,48 @@ def run() -> None:
     # Push changes
     _git("add", "-A")
     _git("commit", "-s", "--no-verify", "-m", f"release: proclet {release_version}")
+    _git("push", "origin", branch)
+
+    # Create a PR
+    _create_pull_request(branch)
+
+
+def run() -> None:
+    """Tag the project version and push the tag to `origin`.
+
+    Raises:
+        SystemExit: if the project version isn't a release version, which means the
+            pull request opened by `pre` isn't merged.
+        ErrorReturnCode: if git or uv fails, including when the tag already exists.
+    """
+    release_version = _project_version()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", release_version):
+        sys.exit(f"`{release_version}` isn't a release version: run `pre` first")
+
     _git("tag", release_version)
+    _git("push", "origin", release_version)
+
+
+def post() -> None:
+    """Open a pull request preparing the iteration of `NEXT_VERSION`.
+
+    Raises:
+        SystemExit: if the env var is invalid.
+        ErrorReturnCode: if git, uv or gh fails.
+    """
+    next_version = _version_from_env("NEXT_VERSION", r"\d+\.\d+\.\d+-dev")
+
+    # Create a new branch
+    branch = f"feat/post-release-v{next_version}"
+    _git("checkout", "-b", branch)
 
     # Update all files
     _set_version(next_version)
+
+    # Push changes
     _git("add", "-A")
     _git("commit", "-s", "--no-verify", "-m", "chore: prepare for next iteration")
-    _git("push", "origin", "main")
-    _git("push", "origin", release_version)
+    _git("push", "origin", branch)
+
+    # Create a PR
+    _create_pull_request(branch)

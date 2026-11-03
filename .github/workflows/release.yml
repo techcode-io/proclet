@@ -1,40 +1,41 @@
-name: release
+name: Release
 
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The next iteration version (e.g. 1.2.4-dev). Releases the version on main, then opens a pull request bumping to this one"
+        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}
+
 jobs:
-  build:
+  ci:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-      - name: Check tag matches project version
-        run: |
-          version=$(uv version --short)
-          if [ "$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME doesn't match project version $version" >&2
-            exit 1
-          fi
+      - uses: techcode-io/github-actions/setup-uv@f1054ff1cbac66b5acdc7c4d0d1d38f18a3a6030 # setup-uv/v1
       - run: uv sync --locked
-      - run: uv run poe ci
-      - run: uv build
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: dist
-          path: dist/
+      - run: uv run poe release
 
+  # Trusted publishing doesn't support reusable workflows: this job must stay here.
   publish:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/proclet/${{ github.ref_name }}/
+      url: https://pypi.org/project/proclet/
     permissions:
       id-token: write
     steps:
@@ -43,3 +44,21 @@ jobs:
           name: dist
           path: dist/
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  post-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: techcode-io/github-actions/setup-github-bot@cd725590b5db9dd4b9855453f3fc83f66e882abf # setup-github-bot/v1
+      - uses: techcode-io/github-actions/setup-uv@f1054ff1cbac66b5acdc7c4d0d1d38f18a3a6030 # setup-uv/v1
+      - run: uv sync --locked
+      - run: uv run poe release:post
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT_VERSION: ${{ inputs.version }}

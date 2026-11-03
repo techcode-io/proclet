@@ -1,6 +1,7 @@
-name: ci
+name: CI
 
 on:
+  workflow_call:
   push:
     branches: [main]
   pull_request:
@@ -19,9 +20,14 @@ jobs:
         python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: techcode-io/github-actions/setup-uv@f1054ff1cbac66b5acdc7c4d0d1d38f18a3a6030 # setup-uv/v1
         with:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
       - run: uv run poe ci
       - run: uv build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        with:
+          name: dist
+          path: dist/

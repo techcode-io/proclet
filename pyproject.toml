@@ -63,6 +63,14 @@ asyncio_mode = "auto"
 help = "Create a new proclet release."
 script = "scripts.release:run"
 
+[tool.poe.tasks."release:pre"]
+help = "Create a PR with changes for release."
+script = "scripts.release:pre"
+
+[tool.poe.tasks."release:post"]
+help = "Create a PR preparing the next iteration."
+script = "scripts.release:post"
+
 [tool.poe.tasks.ci]
 sequence = [
     "lint",
