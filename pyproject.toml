@@ -71,6 +71,10 @@ script = "scripts.release:run"
 help = "Create a PR with changes for release."
 script = "scripts.release:pre"
 
+[tool.poe.tasks."release:github"]
+help = "Create the GitHub release of the project version."
+script = "scripts.release:github"
+
 [tool.poe.tasks."release:post"]
 help = "Create a PR preparing the next iteration."
 script = "scripts.release:post"
