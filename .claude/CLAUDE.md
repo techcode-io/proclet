@@ -37,7 +37,7 @@ No runtime dependencies - keep it that way.
 - This is a public repo: describe the library on its own terms.
 
 ## CI and release
-- `.github/workflows/ci.yml`: push to `main` + PRs, matrix ubuntu/macos/windows x Python 3.12/3.13,
+- `.github/workflows/ci.yml`: push to `main` + PRs, matrix ubuntu/macos/windows x Python 3.12 to 3.15,
   `uv sync --locked`, `uv run poe ci`, `uv build`. Keep `uv.lock` committed and in sync.
 - Actions are pinned by commit SHA with the version in a trailing comment
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
