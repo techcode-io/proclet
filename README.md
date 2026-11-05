@@ -14,8 +14,8 @@
   <a href="https://github.com/techcode-io/proclet/actions/workflows/ci.yml">
     <img src="https://img.shields.io/github/actions/workflow/status/techcode-io/proclet/ci.yml?branch=main&label=ci&style=flat-square" alt="continuous integration" style="height: 20px;">
   </a>
-  <a href="https://github.com/techcode-io/proclet/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors-anon/techcode-io/proclet?color=yellow&style=flat-square" alt="contributors" style="height: 20px;">
+  <a href="https://github.com/techcode-io/proclet/blob/main/pyproject.toml">
+    <img src="https://img.shields.io/badge/dependencies-none-brightgreen?style=flat-square" alt="no runtime dependencies" style="height: 20px;">
   </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img src="https://img.shields.io/badge/apache%202.0-blue.svg?style=flat-square&label=license" alt="license" style="height: 20px;">
