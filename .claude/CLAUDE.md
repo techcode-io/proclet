@@ -18,6 +18,17 @@ No runtime dependencies - keep it that way.
   warnings that CI ignores.
 - `ruff format` also formats Python code blocks inside `README.md`.
 
+## Docs site
+- VitePress site in `docs/` (own `package.json`/`package-lock.json`, Node only needed for
+  docs). `uv run poe docs:install` (`npm ci`), `docs:dev`, `docs:build`.
+- `docs/reference/api.md` is generated (gitignored) by `poe docs:api` (`scripts/api_docs.py`,
+  griffe2md): it adds `{#proclet.X}` heading anchors, unlinks non-proclet refs and renders
+  type aliases itself. A new name in `__all__` must go in its `CONFIG["members"]` (or be a
+  `type` alias with a docstring), else the script fails.
+- Guide pages in `docs/guide/` mirror the README how-tos: keep both in sync.
+- `.github/workflows/docs.yml` builds on PRs (VitePress fails on dead links) and deploys
+  `main` to GitHub Pages (`base: "/proclet/"`).
+
 ## Tests
 - Tests must run on POSIX and Windows: spawn `tests/portable.py` helpers (`py(...)`, `cat()`,
   `echo()`, `sleep()`...), never POSIX tools (`sh`, `cat`, `head`...).

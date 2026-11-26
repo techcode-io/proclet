@@ -27,10 +27,14 @@ from proclet._streams import (
 from proclet.errors import CommandNotFound, ErrorReturnCode, TimeoutException
 from proclet.redirect import RedirectIn, RedirectOut
 
-# Type aliases for process types
 type SyncProcess = subprocess.Popen[bytes]
+"""Process spawned by `exec()`."""
+
 type AsyncProcess = asyncio.subprocess.Process
+"""Process spawned by `aexec()`."""
+
 type Process = SyncProcess | AsyncProcess
+"""Any process spawned by a `Command`, as passed to `ProcessObserver` hooks."""
 
 
 class _PipelineStage(NamedTuple):
