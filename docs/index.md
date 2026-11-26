@@ -10,6 +10,9 @@ hero:
       text: Get started
       link: /guide/getting-started
     - theme: alt
+      text: Recipes
+      link: /recipes/
+    - theme: alt
       text: Why proclet
       link: /guide/why-proclet
     - theme: alt
