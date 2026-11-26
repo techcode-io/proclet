@@ -29,10 +29,36 @@
 - [Issues](https://github.com/techcode-io/proclet/issues)
 - [Contact](mailto:adrien.mannocci@gmail.com)
 
-## :package: Prerequisites
+## :rocket: Quick start
 
-- [Python](https://www.python.org/downloads/) 3.12 or newer, on Linux, macOS or Windows.
-- No runtime dependency.
+Requires Python 3.12 or newer, on Linux, macOS or Windows. No runtime dependency.
+
+```bash
+pip install proclet
+```
+
+```python
+import asyncio
+from io import StringIO
+from proclet import Command
+
+# Run a command and capture its output.
+out = StringIO()
+Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
+print(out.getvalue().strip())
+
+# Chain commands through raw OS pipes, no shell involved.
+Command("git").args("log", "--format=%an").pipe(
+    Command("sort").args("-u").inherit_out()
+)
+
+# Run the same configuration with asyncio.
+asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
+```
+
+- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
+  elapsed timeout `TimeoutException`.
+- The [usage](#-usage) section covers each feature in detail.
 
 ## :sparkles: Features
 
@@ -126,37 +152,6 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 - Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
 
 ## 📖 Usage
-
-### How to install
-
-```bash
-pip install proclet
-```
-
-### How to get started
-
-```python
-import asyncio
-from io import StringIO
-from proclet import Command
-
-# Run a command and capture its output.
-out = StringIO()
-Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
-print(out.getvalue().strip())
-
-# Chain commands through raw OS pipes, no shell involved.
-Command("git").args("log", "--format=%an").pipe(
-    Command("sort").args("-u").inherit_out()
-)
-
-# Run the same configuration with asyncio.
-asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
-```
-
-- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
-  elapsed timeout `TimeoutException`.
-- The following sections cover each feature in detail.
 
 ### How to run a command
 
