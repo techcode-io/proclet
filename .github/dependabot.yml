@@ -25,3 +25,16 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      pre-commit-hooks:
+        patterns:
+          - "*"
