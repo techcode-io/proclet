@@ -110,6 +110,22 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 )
 ```
 
+### Compared to other libraries
+
+| | `subprocess` | `sh` | `plumbum` | `invoke` | `proclet` |
+|---|---|---|---|---|---|
+| Style | function arguments | commands as functions | `local["git"]` objects and operators | shell command strings | chainable builder |
+| Windows | yes | no | yes | yes | yes |
+| asyncio | separate API | `_async=True` | separate async commands | no | same `Command` (`aexec()`) |
+| Pipelines without a shell | hand-wired `Popen`s | yes | yes | no | yes, raw OS pipes |
+| Run as another user | `user=` | `_uid=` | no | no | `user()` |
+| Choose the group and supplementary groups | `group=`, `extra_groups=` | no | no | no | `group()`, `extra_groups()` |
+| Lower the priority | by hand (`preexec_fn`) | no | no | no | `nice()`, Windows included |
+
+- Checked against `sh` 2.4, `plumbum` 2.0 and `invoke` 3.0. `invoke` is mainly a task
+  runner and `plumbum` also covers CLI apps and remote machines: pick them for that.
+- Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
+
 ## :hammer: Workflow
 
 ### Setup
@@ -165,6 +181,31 @@ uv run poe test
 ```bash
 pip install proclet
 ```
+
+### How to get started
+
+```python
+import asyncio
+from io import StringIO
+from proclet import Command
+
+# Run a command and capture its output.
+out = StringIO()
+Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
+print(out.getvalue().strip())
+
+# Chain commands through raw OS pipes, no shell involved.
+Command("git").args("log", "--format=%an").pipe(
+    Command("sort").args("-u").inherit_out()
+)
+
+# Run the same configuration with asyncio.
+asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
+```
+
+- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
+  elapsed timeout `TimeoutException`.
+- The following sections cover each feature in detail.
 
 ### How to run a command
 
@@ -465,6 +506,14 @@ You can also contribute by:
 
 - Sending a [Pull Request](https://github.com/techcode-io/proclet/pulls) with your awesome new features and bug fixed.
 - Be part of the community and help resolve [Issues](https://github.com/techcode-io/proclet/issues).
+
+Before opening a pull request:
+
+- Run `uv run poe ci`: it lints and tests the project, as the CI does on Linux, macOS and Windows.
+- Write tests with the helpers of `tests/portable.py` (`py(...)`, `cat()`, `echo()`...) rather than POSIX tools such as `sh` or `cat`, so they run on every platform.
+- Keep `proclet` free of runtime dependencies.
+- Start commit titles with `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`, `chore` or `release`, followed by a colon: `gitlint` checks it.
+- Add user-facing changes to the `## [Unreleased]` section of [`CHANGELOG.md`](CHANGELOG.md).
 
 ## 🧾 License
 
