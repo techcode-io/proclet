@@ -166,6 +166,31 @@ uv run poe test
 pip install proclet
 ```
 
+### How to get started
+
+```python
+import asyncio
+from io import StringIO
+from proclet import Command
+
+# Run a command and capture its output.
+out = StringIO()
+Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
+print(out.getvalue().strip())
+
+# Chain commands through raw OS pipes, no shell involved.
+Command("git").args("log", "--format=%an").pipe(
+    Command("sort").args("-u").inherit_out()
+)
+
+# Run the same configuration with asyncio.
+asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
+```
+
+- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
+  elapsed timeout `TimeoutException`.
+- The following sections cover each feature in detail.
+
 ### How to run a command
 
 ```python
