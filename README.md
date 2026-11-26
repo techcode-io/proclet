@@ -110,6 +110,22 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 )
 ```
 
+### Compared to other libraries
+
+| | `subprocess` | `sh` | `plumbum` | `invoke` | `proclet` |
+|---|---|---|---|---|---|
+| Style | function arguments | commands as functions | `local["git"]` objects and operators | shell command strings | chainable builder |
+| Windows | yes | no | yes | yes | yes |
+| asyncio | separate API | `_async=True` | separate async commands | no | same `Command` (`aexec()`) |
+| Pipelines without a shell | hand-wired `Popen`s | yes | yes | no | yes, raw OS pipes |
+| Run as another user | `user=` | `_uid=` | no | no | `user()` |
+| Choose the group and supplementary groups | `group=`, `extra_groups=` | no | no | no | `group()`, `extra_groups()` |
+| Lower the priority | by hand (`preexec_fn`) | no | no | no | `nice()`, Windows included |
+
+- Checked against `sh` 2.4, `plumbum` 2.0 and `invoke` 3.0. `invoke` is mainly a task
+  runner and `plumbum` also covers CLI apps and remote machines: pick them for that.
+- Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
+
 ## :hammer: Workflow
 
 ### Setup
