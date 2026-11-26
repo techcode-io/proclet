@@ -34,6 +34,7 @@ Tracker = "https://github.com/techcode-io/proclet/issues"
 
 [dependency-groups]
 dev = [
+    "griffe2md>=1.5.1",
     "poethepoet>=0.36.0",
     "pre-commit>=4.6.0",
     "pytest-asyncio>=1.0.0",
@@ -74,6 +75,10 @@ script = "scripts.release:pre"
 [tool.poe.tasks."release:post"]
 help = "Create a PR preparing the next iteration."
 script = "scripts.release:post"
+
+[tool.poe.tasks."docs:api"]
+help = "Generate the API reference page of the documentation site."
+script = "scripts.api_docs:run"
 
 [tool.poe.tasks.ci]
 sequence = [

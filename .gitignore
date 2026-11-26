@@ -11,3 +11,4 @@ dist
 .ruff_cache
 reports
 .DS_Store
+docs/reference/api.md
