@@ -33,7 +33,6 @@
 
 - [Python](https://www.python.org/downloads/) 3.12 or newer, on Linux, macOS or Windows.
 - No runtime dependency.
-- [uv](https://docs.astral.sh/uv/) to work on the project itself.
 
 ## :sparkles: Features
 
@@ -125,54 +124,6 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 - Checked against `sh` 2.4, `plumbum` 2.0 and `invoke` 3.0. `invoke` is mainly a task
   runner and `plumbum` also covers CLI apps and remote machines: pick them for that.
 - Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
-
-## :hammer: Workflow
-
-### Setup
-
-The following steps will ensure your project is cloned properly.
-
-1. Clone repository:
-   ```shell
-   git clone https://github.com/techcode-io/proclet
-   cd proclet
-   ```
-2. Install dependencies and setup environment:
-   ```shell
-   uv sync
-   uv run poe env:configure
-   ```
-
-### Lint
-
-- To lint you have to use the workflow.
-
-```bash
-uv run poe lint
-```
-
-- It will lint the project code using `ruff`.
-
-### Format
-
-- To format you have to use the workflow.
-
-```bash
-uv run poe fmt
-```
-
-- It will format the project code using `ruff`, including the Python examples of this README.
-
-### Test
-
-- To test you have to use the workflow.
-
-```bash
-uv run poe test
-```
-
-- It will run the test suite using `pytest`.
-- `uv run poe ci` runs both lint and tests, as the CI does.
 
 ## 📖 Usage
 
@@ -507,13 +458,7 @@ You can also contribute by:
 - Sending a [Pull Request](https://github.com/techcode-io/proclet/pulls) with your awesome new features and bug fixed.
 - Be part of the community and help resolve [Issues](https://github.com/techcode-io/proclet/issues).
 
-Before opening a pull request:
-
-- Run `uv run poe ci`: it lints and tests the project, as the CI does on Linux, macOS and Windows.
-- Write tests with the helpers of `tests/portable.py` (`py(...)`, `cat()`, `echo()`...) rather than POSIX tools such as `sh` or `cat`, so they run on every platform.
-- Keep `proclet` free of runtime dependencies.
-- Start commit titles with `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`, `chore` or `release`, followed by a colon: `gitlint` checks it.
-- Add user-facing changes to the `## [Unreleased]` section of [`CHANGELOG.md`](CHANGELOG.md).
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) to set up the project and check your changes before opening a pull request.
 
 ## 🧾 License
 
