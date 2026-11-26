@@ -13,6 +13,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
+      { text: "Recipes", link: "/recipes/", activeMatch: "/recipes/" },
       { text: "API", link: "/reference/api" },
       { text: "Changelog", link: `${repository}/blob/main/CHANGELOG.md` },
       { text: "PyPI", link: "https://pypi.org/project/proclet/" },
@@ -36,6 +37,18 @@ export default defineConfig({
           { text: "Privileges and priority", link: "/guide/privileges" },
           { text: "Reusing and wrapping commands", link: "/guide/reuse-and-wrap" },
           { text: "Observing processes", link: "/guide/observers" },
+        ],
+      },
+      {
+        text: "Recipes",
+        link: "/recipes/",
+        items: [
+          { text: "Stream output to a logger", link: "/recipes/stream-output-to-logger" },
+          { text: "Timeouts", link: "/recipes/timeout" },
+          { text: "Binary pipes without a shell", link: "/recipes/binary-pipes" },
+          { text: "Run as another user", link: "/recipes/run-as-another-user" },
+          { text: "Concurrency with asyncio", link: "/recipes/asyncio-concurrency" },
+          { text: "Wrap a CLI", link: "/recipes/wrap-a-cli" },
         ],
       },
       {

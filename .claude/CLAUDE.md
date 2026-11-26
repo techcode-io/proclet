@@ -26,6 +26,8 @@ No runtime dependencies - keep it that way.
   type aliases itself. A new name in `__all__` must go in its `CONFIG["members"]` (or be a
   `type` alias with a docstring), else the script fails.
 - Guide pages in `docs/guide/` mirror the README how-tos: keep both in sync.
+- Recipes in `docs/recipes/` each solve one problem (titled like the search query), stdlib
+  version first, then `proclet`; list new ones in `recipes/index.md` and the sidebar.
 - `.github/workflows/docs.yml` builds on PRs (VitePress fails on dead links) and deploys
   `main` to GitHub Pages (`base: "/proclet/"`).
 
