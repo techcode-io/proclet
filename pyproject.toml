@@ -28,7 +28,8 @@ requires-python = ">=3.12"
 
 [project.urls]
 Repository = "https://github.com/techcode-io/proclet"
-Documentation = "https://github.com/techcode-io/proclet#readme"
+Homepage = "https://techcode-io.github.io/proclet/"
+Documentation = "https://techcode-io.github.io/proclet/"
 Changelog = "https://github.com/techcode-io/proclet/blob/main/CHANGELOG.md"
 Tracker = "https://github.com/techcode-io/proclet/issues"
 
