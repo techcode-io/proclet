@@ -1,8 +1,8 @@
 """Release proclet, one task per step of the release workflows.
 
 `pre` opens a pull request stamping the changelog and setting the release version,
-`run` tags the version on `main`, `github` creates its GitHub release, and `post` opens
-a pull request setting the next iteration version. Publishing to PyPI is left to the
+`run` tags the version on `main` and creates its GitHub release, and `post` opens a
+pull request setting the next iteration version. Publishing to PyPI is left to the
 `release` workflow.
 """
 
@@ -45,6 +45,25 @@ def _create_pull_request(branch: str) -> None:
     ).inherit().exec()
 
 
+def _create_github_release(version: str, notes: str) -> None:
+    """Create the GitHub release of the already pushed tag `version`.
+
+    Args:
+        version: the released version, also the tag and the release title.
+        notes: the release notes.
+    Raises:
+        ErrorReturnCode: if gh fails, including when the tag doesn't exist.
+    """
+    Command("gh").args(
+        "release",
+        "create",
+        version,
+        "--verify-tag",
+        f"--title={version}",
+        "--notes-file=-",
+    ).cwd(ROOT_PATH).stdin(notes).inherit_out().exec()
+
+
 def _project_version() -> str:
     """Read the project version.
 
@@ -56,22 +75,6 @@ def _project_version() -> str:
     out = StringIO()
     Command("uv").args("version", "--short").cwd(ROOT_PATH).stdout(out).exec()
     return out.getvalue().strip()
-
-
-def _release_version() -> str:
-    """Read the project version, which must be a release version.
-
-    Returns:
-        The version.
-    Raises:
-        SystemExit: if the project version isn't a release version, which means the
-            pull request opened by `pre` isn't merged.
-        ErrorReturnCode: if uv fails.
-    """
-    version = _project_version()
-    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-        sys.exit(f"`{version}` isn't a release version: run `pre` first")
-    return version
 
 
 def _version_from_env(name: str, pattern: str) -> str:
@@ -195,36 +198,24 @@ def pre() -> None:
 
 
 def run() -> None:
-    """Tag the project version and push the tag to `origin`.
+    """Tag the project version, push the tag to `origin` and create its GitHub release.
+
+    The release notes are the version's changelog entries.
 
     Raises:
-        SystemExit: if the project version isn't a release version.
-        ErrorReturnCode: if git or uv fails, including when the tag already exists.
+        SystemExit: if the project version isn't a release version, which means the
+            pull request opened by `pre` isn't merged, or has no changelog entry.
+        ErrorReturnCode: if git, uv or gh fails, including when the tag already exists.
     """
-    release_version = _release_version()
+    release_version = _project_version()
+    if not re.fullmatch(r"\d+\.\d+\.\d+", release_version):
+        sys.exit(f"`{release_version}` isn't a release version: run `pre` first")
+    # Read the notes first: a missing entry then fails before anything is pushed.
+    notes = _release_notes(release_version)
 
     _git("tag", release_version)
     _git("push", "origin", release_version)
-
-
-def github() -> None:
-    """Create the GitHub release of the project version from its changelog entries.
-
-    Raises:
-        SystemExit: if the project version isn't a release version or has no
-            changelog entry.
-        ErrorReturnCode: if uv or gh fails, including when the tag doesn't exist.
-    """
-    release_version = _release_version()
-
-    Command("gh").args(
-        "release",
-        "create",
-        release_version,
-        "--verify-tag",
-        f"--title={release_version}",
-        "--notes-file=-",
-    ).cwd(ROOT_PATH).stdin(_release_notes(release_version)).inherit_out().exec()
+    _create_github_release(release_version, notes)
 
 
 def post() -> None:

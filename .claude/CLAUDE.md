@@ -50,10 +50,10 @@ No runtime dependencies - keep it that way.
      Merge it before going on.
   2. `release.yml` (input: next version, `X.Y.Z-dev`) runs CI (`ci.yml` through
      `workflow_call`, its ubuntu/3.12 job uploads the `dist` artifact), `release` tags the
-     project version and pushes the tag (refuses a dev version), publishes `dist` via PyPI
+     project version, pushes the tag and creates the GitHub release from the version's
+     changelog entries (refuses a dev version or a missing entry), publishes `dist` via PyPI
      trusted publishing (OIDC, GitHub environment `pypi`, no API token; the job must stay
-     in `release.yml`, the publisher is bound to that file), then `release:github` creates
-     the GitHub release from the version's changelog entries and `release:post` opens a PR
+     in `release.yml`, the publisher is bound to that file), then `release:post` opens a PR
      from `feat/post-release-vX.Y.Z-dev` setting the next version. Merge it too.
 - `pyproject.toml`'s `version` is `X.Y.Z.dev0` between releases (`uv version` normalizes
   `-dev`).
