@@ -80,6 +80,18 @@ script = "scripts.release:post"
 help = "Generate the API reference page of the documentation site."
 script = "scripts.api_docs:run"
 
+[tool.poe.tasks."docs:install"]
+help = "Install the documentation site dependencies."
+cmd = "npm ci --prefix docs"
+
+[tool.poe.tasks."docs:dev"]
+help = "Serve the documentation site with live reload."
+sequence = ["docs:api", { cmd = "npm run dev --prefix docs" }]
+
+[tool.poe.tasks."docs:build"]
+help = "Build the documentation site into docs/.vitepress/dist."
+sequence = ["docs:api", { cmd = "npm run build --prefix docs" }]
+
 [tool.poe.tasks.ci]
 sequence = [
     "lint",

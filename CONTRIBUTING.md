@@ -27,6 +27,17 @@ You need [Python](https://www.python.org/downloads/) 3.12 or newer and [uv](http
 | Test | `uv run poe test` | Runs the test suite with `pytest`. |
 | CI | `uv run poe ci` | Runs lint and tests, as the CI does on Linux, macOS and Windows. |
 
+## Documentation
+
+The documentation site lives in `docs/` and is built with [VitePress](https://vitepress.dev/), which
+needs [Node.js](https://nodejs.org/). The API reference page is generated from the docstrings.
+
+| Task | Command | What it does |
+|---|---|---|
+| Install | `uv run poe docs:install` | Installs the site dependencies with `npm ci`. |
+| Serve | `uv run poe docs:dev` | Generates the API reference and serves the site with live reload. |
+| Build | `uv run poe docs:build` | Generates the API reference and builds the site into `docs/.vitepress/dist`. |
+
 ## Before opening a pull request
 
 - Run `uv run poe ci`.
