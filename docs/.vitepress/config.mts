@@ -27,6 +27,13 @@ export default defineConfig({
         ],
       },
       {
+        text: "Migration",
+        items: [
+          { text: "Coming from sh", link: "/migration/from-sh" },
+          { text: "Coming from plumbum", link: "/migration/from-plumbum" },
+        ],
+      },
+      {
         text: "Guide",
         items: [
           { text: "Running commands", link: "/guide/running-commands" },
