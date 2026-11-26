@@ -38,3 +38,16 @@ updates:
       pre-commit-hooks:
         patterns:
           - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      docs-dependencies:
+        patterns:
+          - "*"
