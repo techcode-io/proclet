@@ -507,6 +507,14 @@ You can also contribute by:
 - Sending a [Pull Request](https://github.com/techcode-io/proclet/pulls) with your awesome new features and bug fixed.
 - Be part of the community and help resolve [Issues](https://github.com/techcode-io/proclet/issues).
 
+Before opening a pull request:
+
+- Run `uv run poe ci`: it lints and tests the project, as the CI does on Linux, macOS and Windows.
+- Write tests with the helpers of `tests/portable.py` (`py(...)`, `cat()`, `echo()`...) rather than POSIX tools such as `sh` or `cat`, so they run on every platform.
+- Keep `proclet` free of runtime dependencies.
+- Start commit titles with `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`, `chore` or `release`, followed by a colon: `gitlint` checks it.
+- Add user-facing changes to the `## [Unreleased]` section of [`CHANGELOG.md`](CHANGELOG.md).
+
 ## 🧾 License
 
 The `proclet` project is free and open-source software licensed under the Apache-2.0 license.
