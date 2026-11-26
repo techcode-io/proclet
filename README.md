@@ -62,17 +62,17 @@ asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
 
 ## :sparkles: Features
 
-- Ability to configure and run a command through a chainable, fully typed API.
-- Ability to run the same command synchronously or with `asyncio`.
-- Ability to redirect output to files, file objects, `StringIO`/`BytesIO` or a callable receiving each line.
-- Ability to feed stdin from a string, bytes, a file object or a queue.
-- Ability to chain commands into pipelines connected with raw OS pipes, safe for binary payloads.
-- Ability to enforce timeouts and the exit codes that count as success.
-- Ability to build the environment and `PATH` of a command from the current one.
-- Ability to drop privileges to another user, group and set of supplementary groups.
-- Ability to run a command with a lower CPU (and, on Linux, IO) priority.
-- Ability to wrap a binary into a typed API of its own.
-- Ability to observe every process spawn and exit.
+- **Fluent and typed**: configure a command through a chainable API, checked by your type checker.
+- **Sync and async**: run the same `Command` with `exec()` or `await aexec()`.
+- **Output anywhere**: redirect to files, file objects, `StringIO`/`BytesIO` or a callable receiving each line.
+- **Input from anywhere**: feed stdin from a string, bytes, a file object or a queue.
+- **Shell-free pipelines**: chain commands through raw OS pipes, safe for binary payloads.
+- **Guard rails**: enforce timeouts and choose the exit codes that count as success.
+- **Environment control**: build a command's environment and `PATH` from the current ones.
+- **Privilege dropping**: run as another user, group and set of supplementary groups.
+- **Low priority**: lower the CPU (and, on Linux, IO) priority of a command, Windows included.
+- **Typed wrappers**: turn a binary into a Python API of its own with `Bind`.
+- **Observability**: get notified of every process spawn and exit.
 
 ## :dart: Motivation
 
