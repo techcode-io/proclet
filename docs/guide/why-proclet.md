@@ -74,3 +74,5 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 - Checked against `sh` 2.4, `plumbum` 2.0 and `invoke` 3.0. `invoke` is mainly a task
   runner and `plumbum` also covers CLI apps and remote machines: pick them for that.
 - Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
+- Already using one of them? See [Coming from `sh`](/migration/from-sh) and
+  [Coming from plumbum](/migration/from-plumbum).
