@@ -8,13 +8,19 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import IO, TextIO
 
-# Redirect command types
 type SyncRedirectIn = queue.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
+"""Stdin sources for `exec()`: a queue (`None` closes stdin), a string, bytes or a file object."""
+
 type AsyncRedirectIn = (
     asyncio.Queue[bytes | str | None] | str | bytes | IO[bytes] | TextIO
 )
+"""Stdin sources for `aexec()`: an asyncio queue (`None` closes stdin), a string, bytes or a file object."""
+
 type RedirectIn = SyncRedirectIn | AsyncRedirectIn
+"""Any stdin source accepted by `Command.stdin()`."""
+
 type RedirectOut = Path | IO[bytes] | TextIO | Callable[[str], None]
+"""Stdout/stderr targets: a file path, a file object or a callable receiving each line."""
 
 
 def strip_redirect(log_fn: Callable[[str], None]) -> Callable[[str], None]:
