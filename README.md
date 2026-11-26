@@ -29,25 +29,50 @@
 - [Issues](https://github.com/techcode-io/proclet/issues)
 - [Contact](mailto:adrien.mannocci@gmail.com)
 
-## :package: Prerequisites
+## :rocket: Quick start
 
-- [Python](https://www.python.org/downloads/) 3.12 or newer, on Linux, macOS or Windows.
-- No runtime dependency.
-- [uv](https://docs.astral.sh/uv/) to work on the project itself.
+Requires Python 3.12 or newer, on Linux, macOS or Windows. No runtime dependency.
+
+```bash
+pip install proclet
+```
+
+```python
+import asyncio
+from io import StringIO
+from proclet import Command
+
+# Run a command and capture its output.
+out = StringIO()
+Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
+print(out.getvalue().strip())
+
+# Chain commands through raw OS pipes, no shell involved.
+Command("git").args("log", "--format=%an").pipe(
+    Command("sort").args("-u").inherit_out()
+)
+
+# Run the same configuration with asyncio.
+asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
+```
+
+- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
+  elapsed timeout `TimeoutException`.
+- The [usage](#-usage) section covers each feature in detail.
 
 ## :sparkles: Features
 
-- Ability to configure and run a command through a chainable, fully typed API.
-- Ability to run the same command synchronously or with `asyncio`.
-- Ability to redirect output to files, file objects, `StringIO`/`BytesIO` or a callable receiving each line.
-- Ability to feed stdin from a string, bytes, a file object or a queue.
-- Ability to chain commands into pipelines connected with raw OS pipes, safe for binary payloads.
-- Ability to enforce timeouts and the exit codes that count as success.
-- Ability to build the environment and `PATH` of a command from the current one.
-- Ability to drop privileges to another user, group and set of supplementary groups.
-- Ability to run a command with a lower CPU (and, on Linux, IO) priority.
-- Ability to wrap a binary into a typed API of its own.
-- Ability to observe every process spawn and exit.
+- **Fluent and typed**: configure a command through a chainable API, checked by your type checker.
+- **Sync and async**: run the same `Command` with `exec()` or `await aexec()`.
+- **Output anywhere**: redirect to files, file objects, `StringIO`/`BytesIO` or a callable receiving each line.
+- **Input from anywhere**: feed stdin from a string, bytes, a file object or a queue.
+- **Shell-free pipelines**: chain commands through raw OS pipes, safe for binary payloads.
+- **Guard rails**: enforce timeouts and choose the exit codes that count as success.
+- **Environment control**: build a command's environment and `PATH` from the current ones.
+- **Privilege dropping**: run as another user, group and set of supplementary groups.
+- **Low priority**: lower the CPU (and, on Linux, IO) priority of a command, Windows included.
+- **Typed wrappers**: turn a binary into a Python API of its own with `Bind`.
+- **Observability**: get notified of every process spawn and exit.
 
 ## :dart: Motivation
 
@@ -126,86 +151,7 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
   runner and `plumbum` also covers CLI apps and remote machines: pick them for that.
 - Spotted a mistake? Please [open an issue](https://github.com/techcode-io/proclet/issues).
 
-## :hammer: Workflow
-
-### Setup
-
-The following steps will ensure your project is cloned properly.
-
-1. Clone repository:
-   ```shell
-   git clone https://github.com/techcode-io/proclet
-   cd proclet
-   ```
-2. Install dependencies and setup environment:
-   ```shell
-   uv sync
-   uv run poe env:configure
-   ```
-
-### Lint
-
-- To lint you have to use the workflow.
-
-```bash
-uv run poe lint
-```
-
-- It will lint the project code using `ruff`.
-
-### Format
-
-- To format you have to use the workflow.
-
-```bash
-uv run poe fmt
-```
-
-- It will format the project code using `ruff`, including the Python examples of this README.
-
-### Test
-
-- To test you have to use the workflow.
-
-```bash
-uv run poe test
-```
-
-- It will run the test suite using `pytest`.
-- `uv run poe ci` runs both lint and tests, as the CI does.
-
 ## 📖 Usage
-
-### How to install
-
-```bash
-pip install proclet
-```
-
-### How to get started
-
-```python
-import asyncio
-from io import StringIO
-from proclet import Command
-
-# Run a command and capture its output.
-out = StringIO()
-Command("git").args("rev-parse", "HEAD").stdout(out).timeout(10).exec()
-print(out.getvalue().strip())
-
-# Chain commands through raw OS pipes, no shell involved.
-Command("git").args("log", "--format=%an").pipe(
-    Command("sort").args("-u").inherit_out()
-)
-
-# Run the same configuration with asyncio.
-asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
-```
-
-- A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
-  elapsed timeout `TimeoutException`.
-- The following sections cover each feature in detail.
 
 ### How to run a command
 
@@ -507,13 +453,7 @@ You can also contribute by:
 - Sending a [Pull Request](https://github.com/techcode-io/proclet/pulls) with your awesome new features and bug fixed.
 - Be part of the community and help resolve [Issues](https://github.com/techcode-io/proclet/issues).
 
-Before opening a pull request:
-
-- Run `uv run poe ci`: it lints and tests the project, as the CI does on Linux, macOS and Windows.
-- Write tests with the helpers of `tests/portable.py` (`py(...)`, `cat()`, `echo()`...) rather than POSIX tools such as `sh` or `cat`, so they run on every platform.
-- Keep `proclet` free of runtime dependencies.
-- Start commit titles with `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`, `chore` or `release`, followed by a colon: `gitlint` checks it.
-- Add user-facing changes to the `## [Unreleased]` section of [`CHANGELOG.md`](CHANGELOG.md).
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) to set up the project and check your changes before opening a pull request.
 
 ## 🧾 License
 
