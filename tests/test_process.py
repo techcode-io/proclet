@@ -776,7 +776,7 @@ class TestCommandPipe:
 
     def test_pipe_honors_downstream_cwd(self, tmp_path: Path) -> None:
         buf = StringIO()
-        echo("x").pipe(pwd().cwd(tmp_path).stdout(buf))
+        echo("x").pipe(py(DRAIN_STDIN, "print(os.getcwd())").cwd(tmp_path).stdout(buf))
         assert Path(buf.getvalue().strip()).samefile(tmp_path)
 
     def test_pipe_no_deadlock_when_downstream_exits_early(self) -> None:
@@ -1108,7 +1108,9 @@ class TestCommandApipe:
 
     async def test_apipe_honors_downstream_cwd(self, tmp_path: Path) -> None:
         buf = StringIO()
-        await echo("x").apipe(pwd().cwd(tmp_path).stdout(buf))
+        await echo("x").apipe(
+            py(DRAIN_STDIN, "print(os.getcwd())").cwd(tmp_path).stdout(buf)
+        )
         output = buf.getvalue()
         assert Path(output.strip()).samefile(tmp_path)
 
