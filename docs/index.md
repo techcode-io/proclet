@@ -119,7 +119,7 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
     <dd>Turn <code>git</code>, <code>kubectl</code> or <code>ffmpeg</code> into a Python class with <code>Bind</code>. <a href="./recipes/wrap-a-cli">Wrap a CLI</a></dd>
   </div>
   <div class="pc-capability">
-    <dt><span class="pc-emoji" aria-hidden="true">📦</span>Nothing else to install</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">🪶</span>Nothing else to install</dt>
     <dd>Standard library only, on Linux, macOS and Windows, Python 3.12 or newer. <a href="./guide/getting-started">Getting started</a></dd>
   </div>
 </dl>
