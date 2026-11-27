@@ -48,23 +48,25 @@ from io import StringIO
 from proclet import Command
 
 
-async def uptime(host: str, limit: asyncio.Semaphore) -> str:
+async def uptime(ssh: Command, host: str, limit: asyncio.Semaphore) -> str:
     out = StringIO()
     async with limit:
-        await Command("ssh").args(host, "uptime").stdout(out).timeout(10).aexec()
+        await ssh.copy().args(host, "uptime").stdout(out).aexec()
     return out.getvalue().strip()
 
 
 async def main(hosts: list[str]) -> None:
+    ssh = Command("ssh").timeout(10)
     limit = asyncio.Semaphore(8)
     results = await asyncio.gather(
-        *(uptime(host, limit) for host in hosts), return_exceptions=True
+        *(uptime(ssh, host, limit) for host in hosts), return_exceptions=True
     )
     for host, result in zip(hosts, results):
         print(host, result)
 ```
 
 - `aexec()` takes the same configuration as `exec()`: redirects, timeout, exit codes, env.
+- `ssh` is looked up on `PATH` once in `main()`; each host runs its own `copy()` of it.
 - A failure raises `ErrorReturnCode`, a timeout `TimeoutException` (after terminating the
   process), and `gather(..., return_exceptions=True)` collects them per host.
 - Cancelling the awaiting task terminates the process too, so an `asyncio.timeout(...)`
