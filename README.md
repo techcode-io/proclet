@@ -24,7 +24,7 @@
 </h4>
 
 - [Source](https://github.com/techcode-io/proclet)
-- [Documentation](https://github.com/techcode-io/proclet#readme)
+- [Documentation](https://techcode-io.github.io/proclet/)
 - [Changelog](https://github.com/techcode-io/proclet/blob/main/CHANGELOG.md)
 - [Issues](https://github.com/techcode-io/proclet/issues)
 - [Contact](mailto:adrien.mannocci@gmail.com)
@@ -58,7 +58,9 @@ asyncio.run(Command("git").args("fetch", "--all").inherit_out().aexec())
 
 - A failing command raises `ErrorReturnCode`, a missing binary `CommandNotFound` and an
   elapsed timeout `TimeoutException`.
-- The [usage](#-usage) section covers each feature in detail.
+- The [usage](#-usage) section covers each feature in detail; the
+  [documentation site](https://techcode-io.github.io/proclet/) adds recipes, migration guides
+  and the API reference.
 
 ## :sparkles: Features
 

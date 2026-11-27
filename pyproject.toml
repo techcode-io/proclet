@@ -8,10 +8,28 @@ authors = [
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-keywords = ["subprocess", "process", "pipeline", "asyncio", "shell"]
+keywords = [
+    "subprocess",
+    "process",
+    "command",
+    "pipeline",
+    "pipe",
+    "asyncio",
+    "async",
+    "shell",
+    "sh",
+    "popen",
+    "timeout",
+    "cli-wrapper",
+    "privileges",
+    "nice",
+    "windows",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
     "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
@@ -20,7 +38,9 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.15",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Shells",
+    "Topic :: System :: Systems Administration",
     "Typing :: Typed",
 ]
 dependencies = []
@@ -28,7 +48,8 @@ requires-python = ">=3.12"
 
 [project.urls]
 Repository = "https://github.com/techcode-io/proclet"
-Documentation = "https://github.com/techcode-io/proclet#readme"
+Homepage = "https://techcode-io.github.io/proclet/"
+Documentation = "https://techcode-io.github.io/proclet/"
 Changelog = "https://github.com/techcode-io/proclet/blob/main/CHANGELOG.md"
 Tracker = "https://github.com/techcode-io/proclet/issues"
 

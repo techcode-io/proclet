@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Documentation site at <https://techcode-io.github.io/proclet/>: guides, recipes, migration
+  guides from `sh` and plumbum, and an API reference generated from the docstrings.
+- Docstrings for the public type aliases (`Process`, `RedirectIn`, `RedirectOut`...).
+
 ## [0.1.1] - 2026-11-26
 
 ### Added
