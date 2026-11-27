@@ -113,13 +113,6 @@ sequence = ["docs:api", { cmd = "npm run dev --prefix docs" }]
 help = "Build the documentation site into docs/.vitepress/dist."
 sequence = ["docs:api", { cmd = "npm run build --prefix docs" }]
 
-[tool.poe.tasks.ci]
-sequence = [
-    "lint",
-    "test"
-]
-help = "Run CI automation."
-
 [build-system]
 requires = ["uv_build>=0.10.0"]
 build-backend = "uv_build"
