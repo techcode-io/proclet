@@ -1,6 +1,6 @@
 [project]
 name = "proclet"
-version = "0.1.2.dev0"
+version = "0.1.2"
 description = "Fluent, typed subprocess wrapper with sync and async execution and pipelines."
 authors = [
     { name = "Adrien Mannocci", email = "adrien.mannocci@gmail.com" }
