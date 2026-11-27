@@ -306,6 +306,25 @@ class TestCommand:
         assert dst.group() == os.getgid()
         assert dst.extra_groups() == []
 
+    def test_copy_without_argument_duplicates(self) -> None:
+        src = Command(PYTHON).args("hello").env({"X": "1"}).cwd(Path("sub"))
+        dup = src.copy()
+        assert dup is not src
+        assert dup.binary_path() == src.binary_path()
+        assert dup.args() == ("hello",)
+        assert dup.env() == {"X": "1"}
+        assert dup.cwd() == Path("sub")
+        dup.args("other").env({"Y": "2"})
+        assert src.args() == ("hello",)
+        assert src.env() == {"X": "1"}
+
+    def test_copy_without_argument_skips_lookup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        src = Command(PYTHON)
+        monkeypatch.setenv("PATH", "")
+        assert src.copy().binary_path() == src.binary_path()
+
     def test_exec_success(self) -> None:
         cmd = echo("hello")
         process = cmd.exec()
