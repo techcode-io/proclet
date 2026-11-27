@@ -37,6 +37,15 @@ Requires Python 3.12 or newer, on Linux, macOS or Windows. No runtime dependency
 pip install proclet
 ```
 
+Or with another package manager:
+
+```bash
+uv add proclet
+poetry add proclet
+pdm add proclet
+pipenv install proclet
+```
+
 ```python
 import asyncio
 from io import StringIO
