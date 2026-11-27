@@ -19,11 +19,11 @@ export default defineConfig({
   themeConfig: {
     logo: "/logo.svg",
     nav: [
-      { text: "Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
-      { text: "Recipes", link: "/recipes/", activeMatch: "/recipes/" },
-      { text: "API", link: "/reference/api" },
-      { text: "Changelog", link: `${repository}/blob/main/CHANGELOG.md` },
-      { text: "PyPI", link: "https://pypi.org/project/proclet/" },
+      { text: "📖 Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
+      { text: "🍳 Recipes", link: "/recipes/", activeMatch: "/recipes/" },
+      { text: "🧾 API", link: "/reference/api" },
+      { text: "📝 Changelog", link: `${repository}/blob/main/CHANGELOG.md` },
+      { text: "📦 PyPI", link: "https://pypi.org/project/proclet/" },
     ],
     sidebar: [
       {

@@ -302,3 +302,11 @@ body {
 .vp-doc .pc-next p {
   font-size: 17px;
 }
+
+/* Nav: the emoji widen each link; tighten them before the menu collapses. */
+
+@media (max-width: 1023px) {
+  .VPNavBarMenu .VPNavBarMenuLink {
+    padding: 0 7px;
+  }
+}
