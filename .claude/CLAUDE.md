@@ -30,6 +30,13 @@ No runtime dependencies - keep it that way.
   heading means updating that link.
 - Recipes in `docs/recipes/` each solve one problem (titled like the search query), stdlib
   version first, then `proclet`; list new ones in `recipes/index.md` and the sidebar.
+- Custom theme in `docs/.vitepress/theme/` (extends the default): tokens in `custom.css`
+  (teal = stdout/data flow and brand, amber = stderr/warnings only), fonts self-hosted via
+  Fontsource (Schibsted Grotesk, IBM Plex Mono), Vitesse code theme. The home page hero
+  slots in `HeroPipeline.vue` (animated SVG, off under reduced motion) and
+  `InstallCommand.vue`; `docs/index.md` holds the subprocess-vs-proclet comparison (README's
+  Motivation example, verbatim) and the capabilities list. `vitepress preview` caches the
+  build: restart it after rebuilding.
 - `docs/package.json` overrides `vite` to 6.4.x: VitePress 1.6.4 requires vite 5, whose
   dev server has security advisories only fixed in vite 6.4.4+. Bump the override for new
   vite 6 patches; drop it once on a VitePress release built on a patched vite (2.x).

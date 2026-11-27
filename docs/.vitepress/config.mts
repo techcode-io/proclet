@@ -9,32 +9,39 @@ export default defineConfig({
   base: "/proclet/",
   cleanUrls: true,
   lastUpdated: true,
-  head: [["meta", { name: "theme-color", content: "#3c8772" }]],
+  markdown: {
+    theme: { light: "vitesse-light", dark: "vitesse-dark" },
+  },
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/proclet/logo.svg" }],
+    ["meta", { name: "theme-color", content: "#0b7f80" }],
+  ],
   themeConfig: {
+    logo: "/logo.svg",
     nav: [
-      { text: "Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
-      { text: "Recipes", link: "/recipes/", activeMatch: "/recipes/" },
-      { text: "API", link: "/reference/api" },
-      { text: "Changelog", link: `${repository}/blob/main/CHANGELOG.md` },
-      { text: "PyPI", link: "https://pypi.org/project/proclet/" },
+      { text: "📖 Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
+      { text: "🍳 Recipes", link: "/recipes/", activeMatch: "/recipes/" },
+      { text: "🧾 API", link: "/reference/api" },
+      { text: "📝 Changelog", link: `${repository}/blob/main/CHANGELOG.md` },
+      { text: "📦 PyPI", link: "https://pypi.org/project/proclet/" },
     ],
     sidebar: [
       {
-        text: "Introduction",
+        text: "👋 Introduction",
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Why proclet", link: "/guide/why-proclet" },
         ],
       },
       {
-        text: "Migration",
+        text: "🧳 Migration",
         items: [
           { text: "Coming from sh", link: "/migration/from-sh" },
           { text: "Coming from plumbum", link: "/migration/from-plumbum" },
         ],
       },
       {
-        text: "Guide",
+        text: "📖 Guide",
         items: [
           { text: "Running commands", link: "/guide/running-commands" },
           { text: "Input and output", link: "/guide/input-output" },
@@ -47,7 +54,7 @@ export default defineConfig({
         ],
       },
       {
-        text: "Recipes",
+        text: "🍳 Recipes",
         link: "/recipes/",
         items: [
           { text: "Stream output to a logger", link: "/recipes/stream-output-to-logger" },
@@ -59,7 +66,7 @@ export default defineConfig({
         ],
       },
       {
-        text: "Reference",
+        text: "🧾 Reference",
         items: [{ text: "API", link: "/reference/api" }],
       },
     ],
