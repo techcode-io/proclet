@@ -27,21 +27,21 @@ export default defineConfig({
     ],
     sidebar: [
       {
-        text: "Introduction",
+        text: "👋 Introduction",
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Why proclet", link: "/guide/why-proclet" },
         ],
       },
       {
-        text: "Migration",
+        text: "🧳 Migration",
         items: [
           { text: "Coming from sh", link: "/migration/from-sh" },
           { text: "Coming from plumbum", link: "/migration/from-plumbum" },
         ],
       },
       {
-        text: "Guide",
+        text: "📖 Guide",
         items: [
           { text: "Running commands", link: "/guide/running-commands" },
           { text: "Input and output", link: "/guide/input-output" },
@@ -54,7 +54,7 @@ export default defineConfig({
         ],
       },
       {
-        text: "Recipes",
+        text: "🍳 Recipes",
         link: "/recipes/",
         items: [
           { text: "Stream output to a logger", link: "/recipes/stream-output-to-logger" },
@@ -66,7 +66,7 @@ export default defineConfig({
         ],
       },
       {
-        text: "Reference",
+        text: "🧾 Reference",
         items: [{ text: "API", link: "/reference/api" }],
       },
     ],
