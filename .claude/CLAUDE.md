@@ -25,7 +25,9 @@ No runtime dependencies - keep it that way.
   griffe2md): it adds `{#proclet.X}` heading anchors, unlinks non-proclet refs and renders
   type aliases itself. A new name in `__all__` must go in its `CONFIG["members"]` (or be a
   `type` alias with a docstring), else the script fails.
-- Guide pages in `docs/guide/` mirror the README how-tos: keep both in sync.
+- Guide pages in `docs/guide/` are the only copy of the how-tos: the README's Usage section
+  just links to their sections (`.../guide/<page>#<heading-slug>`), so renaming a guide
+  heading means updating that link.
 - Recipes in `docs/recipes/` each solve one problem (titled like the search query), stdlib
   version first, then `proclet`; list new ones in `recipes/index.md` and the sidebar.
 - `.github/workflows/docs.yml` builds on PRs (VitePress fails on dead links) and deploys
