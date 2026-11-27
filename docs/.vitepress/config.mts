@@ -45,7 +45,7 @@ export default defineConfig({
         items: [
           { text: "Running commands", link: "/guide/running-commands" },
           { text: "Input and output", link: "/guide/input-output" },
-          { text: "asyncio", link: "/guide/asyncio" },
+          { text: "Async execution", link: "/guide/asyncio" },
           { text: "Pipelines", link: "/guide/pipelines" },
           { text: "Environment and PATH", link: "/guide/environment" },
           { text: "Privileges and priority", link: "/guide/privileges" },

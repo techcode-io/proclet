@@ -93,4 +93,4 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-See also: [asyncio](/guide/asyncio), [`Command.aexec`](/reference/api#proclet.Command.aexec).
+See also: [Async execution](/guide/asyncio), [`Command.aexec`](/reference/api#proclet.Command.aexec).

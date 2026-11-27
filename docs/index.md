@@ -92,7 +92,7 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 <dl class="pc-capabilities">
   <div class="pc-capability">
     <dt><span class="pc-emoji" aria-hidden="true">⚡</span>Sync and async</dt>
-    <dd>One <code>Command</code>, run with <code>exec()</code> or <code>await aexec()</code>. <a href="./guide/asyncio">asyncio guide</a></dd>
+    <dd>One <code>Command</code>, run with <code>exec()</code> or <code>await aexec()</code>. <a href="./guide/asyncio">Async guide</a></dd>
   </div>
   <div class="pc-capability">
     <dt><span class="pc-emoji" aria-hidden="true">🚰</span>Pipelines without a shell</dt>
