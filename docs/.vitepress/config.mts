@@ -9,8 +9,15 @@ export default defineConfig({
   base: "/proclet/",
   cleanUrls: true,
   lastUpdated: true,
-  head: [["meta", { name: "theme-color", content: "#3c8772" }]],
+  markdown: {
+    theme: { light: "vitesse-light", dark: "vitesse-dark" },
+  },
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/proclet/logo.svg" }],
+    ["meta", { name: "theme-color", content: "#0b7f80" }],
+  ],
   themeConfig: {
+    logo: "/logo.svg",
     nav: [
       { text: "Guide", link: "/guide/getting-started", activeMatch: "/guide/" },
       { text: "Recipes", link: "/recipes/", activeMatch: "/recipes/" },

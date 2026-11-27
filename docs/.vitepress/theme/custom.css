@@ -1,0 +1,298 @@
+/*
+ * proclet theme: processes joined by pipes.
+ * Teal is the data flowing through stdout/stdin (and the brand); amber is reserved for
+ * stderr and warnings. Everything else stays quiet.
+ */
+
+:root {
+  --pc-paper: #f6f8f7;
+  --pc-paper-alt: #edf2f1;
+  --pc-ink: #12302f;
+  --pc-ink-2: #3f5655;
+  --pc-ink-3: #6b7d7c;
+  --pc-ink-line: #9fb2b0;
+  --pc-pipe-wall: #d5e1df;
+  --pc-flow: #0b7f80;
+  --pc-err: #c98a00;
+  --pc-err-text: #8a5f00;
+
+  --vp-font-family-base: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --vp-font-family-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: var(--pc-paper);
+  --vp-c-bg-soft: var(--pc-paper-alt);
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-text-1: var(--pc-ink);
+  --vp-c-text-2: var(--pc-ink-2);
+  --vp-c-text-3: var(--pc-ink-3);
+  --vp-c-divider: #dbe4e2;
+  --vp-c-gutter: #e6eceb;
+  --vp-c-border: #c9d6d4;
+
+  --vp-c-brand-1: #0a7576;
+  --vp-c-brand-2: #0b7f80;
+  --vp-c-brand-3: #0b7f80;
+  --vp-c-brand-soft: rgba(11, 127, 128, 0.12);
+
+  --vp-c-warning-1: var(--pc-err-text);
+  --vp-c-warning-2: #a87300;
+  --vp-c-warning-3: var(--pc-err);
+  --vp-c-warning-soft: rgba(201, 138, 0, 0.14);
+
+  --vp-code-block-bg: var(--pc-paper-alt);
+  --vp-code-color: #0a6667;
+  --vp-code-bg: rgba(11, 127, 128, 0.09);
+  --vp-code-line-highlight-color: rgba(11, 127, 128, 0.1);
+
+  --vp-button-brand-bg: var(--vp-c-brand-3);
+  --vp-button-brand-hover-bg: #096c6d;
+  --vp-button-brand-active-bg: #085d5e;
+  --vp-button-alt-bg: var(--pc-paper-alt);
+  --vp-button-alt-hover-bg: #dfe8e6;
+  --vp-button-alt-active-bg: #d3dfdd;
+  --vp-button-alt-text: var(--pc-ink);
+  --vp-button-alt-hover-text: var(--pc-ink);
+
+  --vp-home-hero-name-color: var(--pc-ink);
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
+}
+
+.dark {
+  --pc-paper: #0d1d1f;
+  --pc-paper-alt: #122729;
+  --pc-ink: #e3eeec;
+  --pc-ink-2: #a9bcba;
+  --pc-ink-3: #7b908e;
+  --pc-ink-line: #4f6c6a;
+  --pc-pipe-wall: #1f3a3c;
+  --pc-flow: #3cc4be;
+  --pc-err: #f2b84b;
+  --pc-err-text: #f2b84b;
+
+  --vp-c-bg: #0d1d1f;
+  --vp-c-bg-alt: #0a1719;
+  --vp-c-bg-soft: #142a2c;
+  --vp-c-bg-elv: #132729;
+  --vp-c-divider: #21393b;
+  --vp-c-gutter: #081314;
+  --vp-c-border: #2c4a4c;
+
+  --vp-c-brand-1: #3cc4be;
+  --vp-c-brand-2: #2fb0aa;
+  --vp-c-brand-3: #1d8f8a;
+  --vp-c-brand-soft: rgba(60, 196, 190, 0.14);
+
+  --vp-c-warning-2: #d9a33f;
+  --vp-c-warning-soft: rgba(242, 184, 75, 0.14);
+
+  --vp-code-block-bg: #0a1719;
+  --vp-code-color: #6fd8d2;
+  --vp-code-bg: rgba(60, 196, 190, 0.12);
+
+  --vp-button-brand-bg: #1d8f8a;
+  --vp-button-brand-hover-bg: #23a39d;
+  --vp-button-brand-active-bg: #187a76;
+  --vp-button-alt-bg: #163033;
+  --vp-button-alt-hover-bg: #1d3c3f;
+  --vp-button-alt-active-bg: #23474a;
+}
+
+/* Type: one sans family carries everything, set a little tighter than the default. */
+
+body {
+  font-feature-settings: "ss01";
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  letter-spacing: -0.015em;
+}
+
+.vp-doc h1 {
+  font-size: 40px;
+  line-height: 1.15;
+  font-weight: 750;
+}
+
+.vp-doc h2 {
+  font-weight: 700;
+  border-top-color: var(--vp-c-divider);
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.7;
+}
+
+.vp-doc :not(pre) > code {
+  font-size: 0.88em;
+}
+
+/* Code blocks: framed like a pipe section, not floating cards. */
+
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+}
+
+/* Hero */
+
+.VPHome .VPHero .name {
+  font-size: clamp(56px, 9vw, 88px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  padding-bottom: 8px;
+}
+
+.VPHome .VPHero .text {
+  font-size: clamp(30px, 4.4vw, 48px);
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  max-width: 15ch;
+}
+
+.VPHome .VPHero .tagline {
+  max-width: 34em;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+.VPHome .VPHero .image-container {
+  width: 100%;
+  height: auto;
+  transform: none;
+}
+
+.VPHome .VPHero .image-bg {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .VPHome .VPHero .image {
+    flex-basis: 46%;
+    align-self: center;
+  }
+}
+
+@media (max-width: 959px) {
+  .VPHome .VPHero .image {
+    margin: 8px auto 32px;
+    width: min(100%, 460px);
+  }
+}
+
+/* Home sections (written in docs/index.md) */
+
+/* The home content container already provides the side gutters. */
+.pc-section {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 56px 0 8px;
+}
+
+.vp-doc .pc-section h2 {
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.vp-doc .pc-section .pc-lead {
+  margin: 0 0 28px;
+  max-width: 40em;
+  color: var(--vp-c-text-2);
+  font-size: 17px;
+}
+
+.pc-compare {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .pc-compare {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+
+.pc-compare-side {
+  min-width: 0;
+}
+
+.vp-doc .pc-compare-side h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.pc-count {
+  font-weight: 450;
+  color: var(--vp-c-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.vp-doc .pc-compare-side div[class*="language-"] {
+  margin: 0;
+}
+
+.vp-doc .pc-compare-side div[class*="language-"] pre {
+  padding: 16px 0;
+}
+
+.vp-doc .pc-compare-side div[class*="language-"] code {
+  padding: 0 18px;
+  font-size: 13px;
+}
+
+.pc-compare-after div[class*="language-"] {
+  border-color: var(--vp-c-brand-2);
+  box-shadow: inset 3px 0 0 var(--vp-c-brand-2);
+}
+
+.pc-capabilities {
+  display: grid;
+  gap: 4px 48px;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .pc-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pc-capability {
+  padding: 18px 0;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc .pc-capability dt {
+  font-weight: 650;
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+
+.vp-doc .pc-capability dd {
+  margin: 0;
+  color: var(--vp-c-text-2);
+  line-height: 1.6;
+}
+
+.pc-next {
+  padding-bottom: 96px;
+}
+
+.vp-doc .pc-next p {
+  font-size: 17px;
+}
