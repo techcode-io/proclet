@@ -30,6 +30,9 @@ No runtime dependencies - keep it that way.
   heading means updating that link.
 - Recipes in `docs/recipes/` each solve one problem (titled like the search query), stdlib
   version first, then `proclet`; list new ones in `recipes/index.md` and the sidebar.
+- `docs/package.json` overrides `vite` to 6.4.x: VitePress 1.6.4 requires vite 5, whose
+  dev server has security advisories only fixed in vite 6.4.4+. Bump the override for new
+  vite 6 patches; drop it once on a VitePress release built on a patched vite (2.x).
 - `.github/workflows/docs.yml` builds on PRs (VitePress fails on dead links) and deploys
   `main` to GitHub Pages (`base: "/proclet/"`).
 
