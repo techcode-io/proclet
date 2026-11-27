@@ -14,6 +14,18 @@ pip install proclet
 uv add proclet
 ```
 
+```bash [poetry]
+poetry add proclet
+```
+
+```bash [pdm]
+pdm add proclet
+```
+
+```bash [pipenv]
+pipenv install proclet
+```
+
 :::
 
 ## First commands

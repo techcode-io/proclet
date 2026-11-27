@@ -441,16 +441,29 @@ class Command:
         self.__observers.append(observer)
         return self
 
-    def copy(self, cmd: Command) -> Self:
-        """Copy all parameters from another command, keeping this one's binary.
+    @overload
+    def copy(self) -> Command: ...
+
+    @overload
+    def copy(self, cmd: Command, /) -> Self: ...
+
+    def copy(self, cmd: Command | None = None) -> Command | Self:
+        """Duplicate this command, or copy all parameters from another one.
+
+        Without argument, returns a new command running the same binary with the
+        same parameters, without looking the binary up again. With a command,
+        copies its parameters into this one, keeping this one's binary.
 
         Collections are copied; redirect targets and observers are shared.
 
         Args:
             cmd: the command to copy parameters from.
         Returns:
-            self for chaining.
+            a new command if no command is provided, otherwise self for chaining.
         """
+        if cmd is None:
+            return Command(Path(self.__cmd_path)).copy(self)
+
         self.__env = None if cmd.__env is None else cmd.__env.copy()
         self.__cwd = cmd.__cwd
         self.__args = cmd.__args

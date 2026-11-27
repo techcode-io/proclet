@@ -44,7 +44,7 @@ class Bind:
         Returns:
             a new command, independent from the bind and from other operations.
         """
-        cmd = Command(self._template.binary_path()).copy(self._template)
+        cmd = self._template.copy()
         return cmd.args(*args) if args else cmd
 
     def add_observer(self, observer: ProcessObserver) -> Self:

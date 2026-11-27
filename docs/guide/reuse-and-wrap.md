@@ -9,11 +9,12 @@ from pathlib import Path
 from proclet import Command
 
 base = Command("git").cwd(Path("repo")).timeout(30)
-Command("git").copy(base).args("fetch", "--all").exec()
-Command("git").copy(base).args("gc").exec()
+base.copy().args("fetch", "--all").exec()
+base.copy().args("gc").exec()
 ```
 
-- `copy(other)` takes every setting of `other` (args, env, cwd, redirects, timeout, exit codes, privileges, niceness, observers) while keeping its own binary.
+- `copy()` returns a new command with the same binary and every setting (args, env, cwd, redirects, timeout, exit codes, privileges, niceness, observers), without looking the binary up again. Changing the copy leaves `base` untouched.
+- `copy(other)` takes every setting of `other` into an existing command while keeping its own binary.
 
 ## Wrap a binary into a typed API
 
