@@ -12,7 +12,6 @@ No runtime dependencies - keep it that way.
 - `uv run poe test` - run full test suite (`pytest tests`, `asyncio_mode = "auto"`)
 - `uv run poe lint` - `ruff check src/proclet`
 - `uv run poe fmt` - `ruff check --select I --fix` + `ruff format`
-- `uv run poe ci` - lint + test (what CI runs)
 - `uv run poe env:configure` - install pre-commit hooks (ruff, LF line endings, gitlint)
 - Lint only covers `src/proclet`; ruff run over `scripts/` or `tests/` reports a few
   warnings that CI ignores.
@@ -62,8 +61,10 @@ No runtime dependencies - keep it that way.
 - This is a public repo: describe the library on its own terms.
 
 ## CI and release
-- `.github/workflows/ci.yml`: push to `main` + PRs, matrix ubuntu/macos/windows x Python 3.12 to 3.15,
-  `uv sync --locked`, `uv run poe ci`, `uv build`. Keep `uv.lock` committed and in sync.
+- `.github/workflows/ci.yml`: push to `main` + PRs, three chained jobs (`needs`): `lint` (ubuntu,
+  `uv sync --locked` + `uv run poe lint`), `test` (matrix ubuntu/macos/windows x Python
+  3.12 to 3.15, `uv sync --locked` + `uv run poe test`) and `build` (ubuntu/3.12, `uv build`,
+  uploads the `dist` artifact). Keep `uv.lock` committed and in sync.
 - Actions are pinned by commit SHA with the version in a trailing comment
   (`uses: actions/checkout@<sha> # v7.0.1`); bump both together.
 - Releases are cut by manually dispatching two workflows on `main`, each running a
@@ -74,7 +75,7 @@ No runtime dependencies - keep it that way.
      sync, which `uv sync --locked` needs) and opens a PR from `feat/pre-release-vX.Y.Z`.
      Merge it before going on.
   2. `release.yml` (input: next version, `X.Y.Z-dev`) runs CI (`ci.yml` through
-     `workflow_call`, its ubuntu/3.12 job uploads the `dist` artifact), `release` tags the
+     `workflow_call`, its `build` job uploads the `dist` artifact), `release` tags the
      project version, pushes the tag and creates the GitHub release from the version's
      changelog entries (refuses a dev version or a missing entry), publishes `dist` via PyPI
      trusted publishing (OIDC, GitHub environment `pypi`, no API token; the job must stay
