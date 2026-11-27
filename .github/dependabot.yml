@@ -4,6 +4,9 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     target-branch: "main"
+    labels:
+      - "type=dependencies"
+      - "area=source"
     schedule:
       interval: "weekly"
     commit-message:
@@ -16,6 +19,9 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "main"
+    labels:
+      - "type=dependencies"
+      - "area=ci"
     schedule:
       interval: "weekly"
     commit-message:
@@ -29,6 +35,9 @@ updates:
   - package-ecosystem: "pre-commit"
     directory: "/"
     target-branch: "main"
+    labels:
+      - "type=dependencies"
+      - "area=ci"
     schedule:
       interval: "weekly"
     commit-message:
@@ -42,6 +51,9 @@ updates:
   - package-ecosystem: "npm"
     directory: "/docs"
     target-branch: "main"
+    labels:
+      - "type=dependencies"
+      - "area=docs"
     schedule:
       interval: "weekly"
     commit-message:
