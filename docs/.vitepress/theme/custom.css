@@ -283,8 +283,14 @@ body {
   margin: 0 0 4px;
 }
 
+.pc-emoji {
+  display: inline-block;
+  width: 1.6em;
+  font-size: 1.05em;
+}
+
 .vp-doc .pc-capability dd {
-  margin: 0;
+  margin: 0 0 0 calc(1.6em * 1.05 * 17 / 16);
   color: var(--vp-c-text-2);
   line-height: 1.6;
 }

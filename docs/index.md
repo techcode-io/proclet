@@ -91,35 +91,35 @@ Command("pg_dump").args("shop").stderr(to_log).timeout(600).pipe(
 
 <dl class="pc-capabilities">
   <div class="pc-capability">
-    <dt>Sync and async</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">⚡</span>Sync and async</dt>
     <dd>One <code>Command</code>, run with <code>exec()</code> or <code>await aexec()</code>. <a href="./guide/asyncio">asyncio guide</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Pipelines without a shell</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">🚰</span>Pipelines without a shell</dt>
     <dd>Stages joined by raw OS pipes: no quoting, no injection, binary data untouched. <a href="./recipes/binary-pipes">Binary pipes</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Output where you want it</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">📤</span>Output where you want it</dt>
     <dd>Send each line to a logger as it is written, or to a file, a <code>StringIO</code> or a <code>BytesIO</code>. <a href="./recipes/stream-output-to-logger">Stream to a logger</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Input from anything</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">📥</span>Input from anything</dt>
     <dd>Feed stdin from a string, bytes, a file or a queue that streams while the command runs. <a href="./guide/input-output">Input and output</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Timeouts that clean up</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">⏱️</span>Timeouts that clean up</dt>
     <dd>Terminate, wait, then kill, and raise <code>TimeoutException</code>, in pipelines too. <a href="./recipes/timeout">Timeouts</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Privileges and priority</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">🔐</span>Privileges and priority</dt>
     <dd>Run as another user and group, drop supplementary groups, lower the CPU and IO priority. <a href="./guide/privileges">Privileges and priority</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Typed wrappers for your tools</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">🧩</span>Typed wrappers for your tools</dt>
     <dd>Turn <code>git</code>, <code>kubectl</code> or <code>ffmpeg</code> into a Python class with <code>Bind</code>. <a href="./recipes/wrap-a-cli">Wrap a CLI</a></dd>
   </div>
   <div class="pc-capability">
-    <dt>Nothing else to install</dt>
+    <dt><span class="pc-emoji" aria-hidden="true">📦</span>Nothing else to install</dt>
     <dd>Standard library only, on Linux, macOS and Windows, Python 3.12 or newer. <a href="./guide/getting-started">Getting started</a></dd>
   </div>
 </dl>
